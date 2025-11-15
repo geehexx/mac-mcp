@@ -7,10 +7,10 @@ high-level objectives into executable task DAGs without human intervention.
 import json
 from typing import Any
 
-from anthropic import Anthropic
 from pydantic import BaseModel, Field
 
 from mac_mcp.domain.tasks import Task, TaskDAG
+from mac_mcp.llm.base import LLMProvider
 
 
 class DecompositionResult(BaseModel):
@@ -30,30 +30,34 @@ class DecompositionResult(BaseModel):
 class GoalDecomposer:
     """LLM-based goal decomposer for autonomous task planning.
 
-    The decomposer uses Claude to:
+    The decomposer uses an LLM to:
     - Analyze goal context and constraints
     - Break down complex objectives into executable tasks
     - Identify task dependencies and parallelization opportunities
     - Generate capability requirements for each task
 
     Attributes:
-        client: Anthropic client for LLM calls
-        model: Claude model to use (default: claude-sonnet-4-5)
+        llm_provider: LLM provider for decomposition
+        max_tokens: Maximum tokens for LLM responses
+        temperature: Temperature for LLM sampling
     """
 
     def __init__(
         self,
-        api_key: str | None = None,
-        model: str = "claude-sonnet-4-5-20250929",
+        llm_provider: LLMProvider,
+        max_tokens: int = 4096,
+        temperature: float = 0.7,
     ) -> None:
         """Initialize the decomposer.
 
         Args:
-            api_key: Anthropic API key (uses ANTHROPIC_API_KEY env var if None)
-            model: Claude model to use
+            llm_provider: LLM provider instance
+            max_tokens: Maximum tokens for LLM responses
+            temperature: Temperature for LLM sampling
         """
-        self.client = Anthropic(api_key=api_key)
-        self.model = model
+        self.llm_provider = llm_provider
+        self.max_tokens = max_tokens
+        self.temperature = temperature
 
     async def decompose(
         self,
@@ -79,20 +83,14 @@ class GoalDecomposer:
         # Build the decomposition prompt
         prompt = self._build_prompt(description, context or {}, constraints or {})
 
-        # Call Claude API
-        response = self.client.messages.create(
-            model=self.model,
-            max_tokens=4096,
-            messages=[
-                {
-                    "role": "user",
-                    "content": prompt,
-                }
-            ],
+        # Call LLM provider
+        content = await self.llm_provider.generate(
+            prompt=prompt,
+            max_tokens=self.max_tokens,
+            temperature=self.temperature,
         )
 
         # Parse the response
-        content = response.content[0].text if response.content else ""
         result = self._parse_response(content)
 
         # Create Task objects

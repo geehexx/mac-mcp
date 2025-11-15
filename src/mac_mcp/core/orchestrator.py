@@ -53,11 +53,15 @@ class Orchestrator:
         Args:
             event_store: Event store for persistence
             supervisor: Optional agent supervisor (creates one if not provided)
-            decomposer: Optional goal decomposer (creates one if not provided)
+            decomposer: Goal decomposer configured with LLM provider (required for goal submission)
+
+        Note:
+            If decomposer is None, goal submission will fail. The decomposer must be
+            configured with an appropriate LLM provider (Anthropic or Bedrock).
         """
         self.event_store = event_store
         self.supervisor = supervisor or AgentSupervisor(event_store)
-        self.decomposer = decomposer or GoalDecomposer()
+        self.decomposer = decomposer
 
         self._tasks: dict[str, Task] = {}
         self._goals: dict[str, Goal] = {}
@@ -398,8 +402,12 @@ class Orchestrator:
             Created goal
 
         Raises:
-            ValueError: If goal already exists
+            ValueError: If goal already exists or decomposer not configured
         """
+        if self.decomposer is None:
+            msg = "Goal decomposer not configured. Orchestrator must be initialized with a GoalDecomposer."
+            raise ValueError(msg)
+
         if goal_id in self._goals:
             msg = f"Goal {goal_id} already exists"
             raise ValueError(msg)
