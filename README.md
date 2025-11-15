@@ -1,3 +1,19 @@
+---
+title: Multi-Agent Coordination MCP Server
+description: Protocol-sound orchestrator for autonomous LLM-based agent teams
+version: 0.1.0
+status: design-complete
+type: documentation
+category: overview
+keywords: [mcp, multi-agent, orchestration, llm, coordination, protocol]
+authors: [geehexx]
+created: 2025-11-15
+updated: 2025-11-15
+related_docs: [ARCHITECTURE.md, PROTOCOL.md, DESIGN_RATIONALE.md]
+machine_readable: true
+schema_version: 1.0.0
+---
+
 # Multi-Agent Coordination MCP Server
 
 > A protocol-sound orchestrator for autonomous LLM-based agent teams

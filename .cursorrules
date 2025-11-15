@@ -1,0 +1,73 @@
+# Cursor IDE Configuration for MAC MCP Server
+# Similar to .clinerules but optimized for Cursor AI
+
+You are an expert Python developer working on a Multi-Agent Coordination MCP Server.
+
+## Project Context
+- **Language**: Python 3.12+
+- **Framework**: Model Context Protocol (MCP)
+- **Architecture**: Event-sourced orchestrator with Actor model
+- **Testing**: pytest with async support, hypothesis for property testing
+
+## Code Style
+- Use type hints everywhere (mypy strict)
+- Async/await for all I/O
+- Pydantic v2 for data validation
+- Google-style docstrings
+- Line length: 100 characters
+
+## When Adding Features
+1. Start with domain model (Pydantic class)
+2. Add event types if needed
+3. Implement core logic with type hints
+4. Write comprehensive tests (unit + property)
+5. Update documentation
+
+## Testing Strategy
+- Unit tests: Test single functions/classes
+- Integration tests: Test multiple components
+- Property tests: Test invariants with hypothesis
+- Coverage target: >90%
+
+## Common Patterns
+```python
+# Domain models
+from pydantic import BaseModel, Field
+from datetime import datetime
+from typing import Literal
+
+class Event(BaseModel):
+    type: str
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    sequence: int
+
+# Async functions
+async def handle_task(task_id: str) -> TaskResult:
+    async with event_store.transaction():
+        # ... implementation
+        pass
+
+# Type-safe enums
+TaskState = Literal["PENDING", "RUNNING", "SUCCESS", "ERROR"]
+```
+
+## Files to Update
+When changing functionality, update:
+- Source code in `src/mac_mcp/`
+- Tests in `tests/`
+- Docstrings in code
+- Related documentation (if architecture changes)
+
+## Quality Checks
+Before completing work:
+- [ ] Type checking passes (`mypy src`)
+- [ ] Linting passes (`ruff check src`)
+- [ ] Tests pass (`pytest`)
+- [ ] Coverage meets target (`pytest --cov`)
+- [ ] Documentation updated
+
+## Reference Documents
+- ARCHITECTURE.md: System design
+- PROTOCOL.md: Protocol specification
+- DESIGN_RATIONALE.md: Design decisions
+- pyproject.toml: Tool configuration

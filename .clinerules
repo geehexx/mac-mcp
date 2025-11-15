@@ -1,0 +1,86 @@
+# Claude Code Configuration for MAC MCP Server
+# This file provides context and rules for Claude and other AI agents working on this project
+
+## Project Overview
+project_name: Multi-Agent Coordination MCP Server
+project_type: Python MCP Server
+python_version: "3.12+"
+architecture: Event-sourced orchestrator with Actor model
+
+## Code Standards
+- Use src/ layout for all production code
+- All code must have type hints (mypy strict mode)
+- Use async/await for all I/O operations
+- Follow ruff linting rules (see pyproject.toml)
+- Maintain test coverage above 90%
+- Use property-based testing for core logic
+- Document all public APIs with docstrings (Google style)
+
+## Testing Requirements
+- Unit tests: Fast, isolated, no I/O
+- Integration tests: Test component interactions
+- Property tests: Test invariants and edge cases
+- All tests must be async-compatible
+- Use pytest fixtures for setup/teardown
+- Mock external dependencies in unit tests
+
+## Architecture Principles
+1. Event Sourcing: All state changes are events
+2. Actor Model: Agents communicate via orchestrator only
+3. State Machine: Explicit state transitions
+4. Type Safety: Use Pydantic v2 for validation
+5. Async First: All I/O is non-blocking
+
+## File Organization
+src/mac_mcp/
+  ├── __init__.py          # Package exports and version
+  ├── domain/              # Domain models (events, tasks, agents)
+  ├── core/                # Core orchestrator logic
+  ├── storage/             # Event store implementations
+  ├── mcp/                 # MCP server and protocol
+  └── cli.py               # CLI entry point
+
+tests/
+  ├── unit/                # Unit tests (fast, isolated)
+  ├── integration/         # Integration tests
+  └── property/            # Property-based tests
+
+## Import Ordering
+1. Standard library
+2. Third-party packages
+3. Local imports
+(Enforced by ruff isort)
+
+## Commit Standards
+- Conventional commits format
+- Run tests before committing
+- No temporary/build files in commits
+- Update documentation with code changes
+
+## Documentation
+- All docs have YAML frontmatter
+- Keep README.md updated with API changes
+- Update ARCHITECTURE.md for design changes
+- Add examples for new features
+
+## Security
+- Never commit secrets or credentials
+- Validate all external inputs
+- Use type checking to prevent injection
+- Rate limit external requests
+
+## Performance
+- Use uvloop on non-Windows systems
+- Batch event writes when possible
+- Implement backpressure in event streams
+- Profile before optimizing
+
+## AI Agent Guidance
+When working on this codebase:
+1. Read ARCHITECTURE.md and PROTOCOL.md first
+2. Follow the patterns in existing code
+3. Add tests for new functionality
+4. Update type hints for all changes
+5. Run `ruff check` and `mypy` before committing
+6. Ensure all tests pass with `pytest`
+7. Update relevant documentation

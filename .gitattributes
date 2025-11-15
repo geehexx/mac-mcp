@@ -1,0 +1,39 @@
+# Git attributes for consistent line endings and language detection
+
+# Auto detect text files and normalize line endings to LF
+* text=auto eol=lf
+
+# Source code
+*.py text diff=python
+*.pyi text diff=python
+*.md text diff=markdown
+*.toml text
+*.yaml text
+*.yml text
+*.json text
+*.jsonl text
+
+# Scripts
+*.sh text eol=lf
+*.bash text eol=lf
+
+# Documentation
+*.txt text
+*.rst text
+
+# Binary files
+*.pkl binary
+*.db binary
+*.sqlite binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+
+# Exclude from git archive
+.gitattributes export-ignore
+.gitignore export-ignore
+.github export-ignore
+tests export-ignore

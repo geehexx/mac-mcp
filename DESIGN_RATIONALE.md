@@ -1,3 +1,26 @@
+---
+title: Design Rationale
+description: Deep-dive into architectural decisions and trade-offs
+version: 1.0.0
+status: complete
+type: technical-documentation
+category: design-decisions
+keywords: [rationale, design-decisions, trade-offs, architecture, patterns]
+authors: [geehexx]
+created: 2025-11-15
+updated: 2025-11-15
+related_docs: [ARCHITECTURE.md, PROTOCOL.md, README.md]
+machine_readable: true
+schema_version: 1.0.0
+decision_categories:
+  - orchestration-patterns
+  - task-assignment
+  - storage-strategy
+  - state-management
+  - capability-matching
+  - hitl-integration
+---
+
 # Design Rationale
 
 ## Introduction

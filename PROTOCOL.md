@@ -1,3 +1,22 @@
+---
+title: Multi-Agent Coordination Protocol Specification
+description: Formal protocol specification with message schemas and state transitions
+version: 1.0.0
+status: complete
+type: protocol-specification
+category: specification
+keywords: [protocol, mcp, json-rpc, state-machine, event-types, api]
+authors: [geehexx]
+created: 2025-11-15
+updated: 2025-11-15
+related_docs: [ARCHITECTURE.md, DESIGN_RATIONALE.md, README.md]
+machine_readable: true
+schema_version: 1.0.0
+protocol_version: 1.0.0
+conformance_classes: [class-a-orchestrator, class-b-minimal, class-c-agent]
+transport: [json-rpc-2.0, jsonl]
+---
+
 # Multi-Agent Coordination Protocol Specification
 
 ## Version 1.0.0

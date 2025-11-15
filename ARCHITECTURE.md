@@ -1,3 +1,26 @@
+---
+title: Multi-Agent Coordination MCP Server - Architecture Design
+description: Comprehensive system architecture and design patterns
+version: 1.0.0
+status: complete
+type: technical-specification
+category: architecture
+keywords: [architecture, design-patterns, supervisor-worker, actor-model, state-machine, event-sourcing]
+authors: [geehexx]
+created: 2025-11-15
+updated: 2025-11-15
+related_docs: [PROTOCOL.md, DESIGN_RATIONALE.md, README.md]
+machine_readable: true
+schema_version: 1.0.0
+components:
+  - goal_decomposer
+  - agent_supervisor
+  - hitl_integrator
+  - task_state_machine
+  - event_log
+patterns: [actor-model, supervisor-worker, event-sourcing, state-machine]
+---
+
 # Multi-Agent Coordination MCP Server - Architecture Design
 
 ## Executive Summary
