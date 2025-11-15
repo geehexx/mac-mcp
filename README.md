@@ -29,8 +29,10 @@ The **Multi-Agent Coordination (MAC) MCP Server** is a central orchestrator that
 - **🔄 State Management**: Deterministic state machine with event sourcing (JSONL format)
 - **🛡️ Fault Tolerance**: Heartbeat monitoring, automatic task reassignment, circuit breakers
 - **🔗 Dependency Resolution**: Agents coordinate via dependency requests (no direct communication)
-- **📊 Observable**: Complete audit trail with real-time event streaming
+- **📊 Observable**: Complete audit trail with real-time event streaming and beautiful TUI dashboard
 - **🔌 MCP-Native**: Built on standard MCP tools and resources
+- **⚙️ Configurable**: Flexible configuration via YAML files or environment variables
+- **☁️ Multi-Provider**: Support for both Anthropic API and AWS Bedrock for Claude models
 
 ## Architecture Highlights
 
@@ -79,7 +81,8 @@ The **Multi-Agent Coordination (MAC) MCP Server** is a central orchestrator that
 
 ### Prerequisites
 
-- Python 3.10+
+- Python 3.12+
+- Anthropic API key OR AWS credentials (for Bedrock)
 - Model Context Protocol SDK
 
 ### Installation
@@ -89,36 +92,122 @@ The **Multi-Agent Coordination (MAC) MCP Server** is a central orchestrator that
 git clone https://github.com/geehexx/mac-mcp.git
 cd mac-mcp
 
-# Install dependencies (when implemented)
+# Install dependencies
 pip install -e .
-```
-
-### Basic Usage
-
-```bash
-# Start the orchestrator
-mac-mcp serve --mode dev
-
-# In another terminal, submit a goal
-mac-mcp goal submit "Build a REST API for user management"
 ```
 
 ### Configuration
 
+MAC MCP Server uses a flexible configuration system supporting both YAML files and environment variables.
+
+#### Option 1: YAML Configuration
+
+```bash
+# Copy example config
+cp config.example.yaml config.yaml
+
+# Edit configuration
+nano config.yaml
+
+# Run with config file
+mac-mcp config.yaml
+```
+
+**Example Configuration**:
+
 ```yaml
 # config.yaml
-orchestrator:
-  mode: development  # development | production | headless
-  heartbeat_interval_ms: 30000
-  max_concurrent_tasks_per_agent: 5
+llm:
+  # Choose provider: "anthropic" or "bedrock"
+  provider: "anthropic"
+  model: "claude-sonnet-4-5-20250929"
+  api_key: "your-api-key-here"  # For Anthropic
+  # For Bedrock:
+  # provider: "bedrock"
+  # model: "anthropic.claude-3-5-sonnet-20241022-v2:0"
+  # aws_region: "us-east-1"
+  # aws_profile: "default"  # Or use aws_access_key_id/aws_secret_access_key
 
-storage:
-  backend: file  # file | memory | database
-  path: ./events.jsonl
+server:
+  transport: "stdio"  # MCP transport mode
+  event_store_path: "data/events.jsonl"
+  max_agents: 100
+  heartbeat_interval: 30  # seconds
 
-decomposer:
-  backend: claude  # claude | template | hybrid
-  model: claude-sonnet-4  # Model for goal decomposition
+ui:
+  mode: "tui"  # "tui" for dashboard, "headless" for production
+  refresh_interval: 1.0  # seconds
+  theme: "dark"
+  show_events: true
+
+logging:
+  level: "INFO"
+  file: "logs/mac-mcp.log"
+  console: true
+```
+
+#### Option 2: Environment Variables
+
+```bash
+# LLM Provider
+export MAC_LLM_PROVIDER=anthropic
+export MAC_LLM_MODEL=claude-sonnet-4-5-20250929
+export MAC_LLM_API_KEY=your-api-key-here
+
+# Or for AWS Bedrock:
+# export MAC_LLM_PROVIDER=bedrock
+# export MAC_LLM_MODEL=anthropic.claude-3-5-sonnet-20241022-v2:0
+# export MAC_LLM_AWS_REGION=us-east-1
+# export MAC_LLM_AWS_PROFILE=default
+
+# UI Mode
+export MAC_UI_MODE=tui  # or "headless"
+
+# Run server
+mac-mcp
+```
+
+### Basic Usage
+
+#### With TUI Dashboard (Interactive Mode)
+
+```bash
+# Start with terminal UI dashboard
+export MAC_LLM_API_KEY=your-api-key
+export MAC_UI_MODE=tui
+mac-mcp
+
+# The dashboard will display:
+# - Goals: Status, progress, task count
+# - Tasks: State, assigned agents, progress
+# - Agents: Health, active tasks, success rate
+# - Real-time updates every second
+```
+
+#### Headless Mode (Production)
+
+```bash
+# Start in headless mode (no UI)
+export MAC_LLM_API_KEY=your-api-key
+export MAC_UI_MODE=headless
+mac-mcp
+
+# Or using config file
+mac-mcp config.yaml
+```
+
+#### Using AWS Bedrock Instead of Anthropic API
+
+```bash
+# Configure for AWS Bedrock
+export MAC_LLM_PROVIDER=bedrock
+export MAC_LLM_MODEL=anthropic.claude-3-5-sonnet-20241022-v2:0
+export MAC_LLM_AWS_REGION=us-east-1
+export MAC_LLM_AWS_PROFILE=default  # Uses AWS credential chain
+export MAC_UI_MODE=tui
+
+# Run server
+mac-mcp
 ```
 
 ## Documentation
