@@ -9,17 +9,21 @@ The orchestrator is the central coordination point implementing:
 
 from typing import Any
 
+from mac_mcp.core.decomposer import GoalDecomposer
 from mac_mcp.core.supervisor import AgentSupervisor
 from mac_mcp.domain.agents import Agent
 from mac_mcp.domain.events import (
     Event,
     EventType,
+    GoalDecomposedEvent,
+    GoalSubmittedEvent,
     TaskAssignedEvent,
     TaskCompletedEvent,
     TaskCreatedEvent,
     TaskFailedEvent,
     TaskProgressEvent,
 )
+from mac_mcp.domain.goals import Goal, GoalState
 from mac_mcp.domain.tasks import Task, TaskDAG, TaskState
 from mac_mcp.storage.base import EventStore
 
@@ -42,18 +46,21 @@ class Orchestrator:
         self,
         event_store: EventStore,
         supervisor: AgentSupervisor | None = None,
+        decomposer: GoalDecomposer | None = None,
     ) -> None:
         """Initialize the orchestrator.
 
         Args:
             event_store: Event store for persistence
             supervisor: Optional agent supervisor (creates one if not provided)
+            decomposer: Optional goal decomposer (creates one if not provided)
         """
         self.event_store = event_store
         self.supervisor = supervisor or AgentSupervisor(event_store)
+        self.decomposer = decomposer or GoalDecomposer()
 
         self._tasks: dict[str, Task] = {}
-        self._goals: dict[str, dict[str, Any]] = {}
+        self._goals: dict[str, Goal] = {}
 
     async def create_task(
         self,
@@ -372,6 +379,167 @@ class Orchestrator:
 
         return None
 
+    async def submit_goal(
+        self,
+        goal_id: str,
+        description: str,
+        context: dict[str, Any] | None = None,
+        constraints: dict[str, Any] | None = None,
+    ) -> Goal:
+        """Submit a new goal for autonomous decomposition.
+
+        Args:
+            goal_id: Unique goal identifier
+            description: Goal description
+            context: Additional context (language, framework, domain, etc.)
+            constraints: Constraints (deadline, max_agents, etc.)
+
+        Returns:
+            Created goal
+
+        Raises:
+            ValueError: If goal already exists
+        """
+        if goal_id in self._goals:
+            msg = f"Goal {goal_id} already exists"
+            raise ValueError(msg)
+
+        # Create goal
+        goal = Goal(
+            id=goal_id,
+            description=description,
+            context=context or {},
+            constraints=constraints or {},
+        )
+        self._goals[goal_id] = goal
+
+        # Record submission event
+        sequence = await self.event_store.get_latest_sequence() + 1
+        event = GoalSubmittedEvent(
+            goal_id=goal_id,
+            sequence=sequence,
+            payload={
+                "description": description,
+                "context": context or {},
+                "constraints": constraints or {},
+            },
+        )
+        await self.event_store.append(event)
+
+        # Trigger autonomous decomposition
+        await self.decompose_goal(goal_id)
+
+        return goal
+
+    async def decompose_goal(self, goal_id: str) -> list[Task]:
+        """Decompose a goal into tasks using LLM.
+
+        Args:
+            goal_id: Goal identifier
+
+        Returns:
+            List of created tasks
+
+        Raises:
+            KeyError: If goal not found
+            ValueError: If decomposition fails
+        """
+        goal = self._goals.get(goal_id)
+        if goal is None:
+            msg = f"Goal {goal_id} not found"
+            raise KeyError(msg)
+
+        # Mark as decomposing
+        goal.start_decomposition()
+
+        try:
+            # Call LLM decomposer
+            task_dag = await self.decomposer.decompose(
+                goal_id=goal_id,
+                description=goal.description,
+                context=goal.context,
+                constraints=goal.constraints,
+            )
+
+            # Create tasks from DAG
+            created_tasks: list[Task] = []
+            for task in task_dag.tasks:
+                # Update task dependencies from edges
+                deps = [from_id for from_id, to_id in task_dag.edges if to_id == task.id]
+                task.dependencies = deps
+
+                # Store task
+                self._tasks[task.id] = task
+                created_tasks.append(task)
+
+                # Record task creation event
+                sequence = await self.event_store.get_latest_sequence() + 1
+                event = TaskCreatedEvent(
+                    task_id=task.id,
+                    goal_id=goal_id,
+                    sequence=sequence,
+                    payload={
+                        "description": task.description,
+                        "required_capabilities": task.required_capabilities,
+                        "dependencies": task.dependencies,
+                        "context": task.metadata,
+                    },
+                )
+                await self.event_store.append(event)
+
+            # Mark goal as ready
+            task_ids = [t.id for t in created_tasks]
+            goal.mark_ready(task_ids)
+
+            # Record decomposition event
+            sequence = await self.event_store.get_latest_sequence() + 1
+            decomp_event = GoalDecomposedEvent(
+                goal_id=goal_id,
+                sequence=sequence,
+                payload={
+                    "task_ids": task_ids,
+                    "reasoning": task_dag.tasks[0].metadata.get("reasoning", "") if task_dag.tasks else "",
+                },
+            )
+            await self.event_store.append(decomp_event)
+
+            # Start execution
+            goal.start_execution()
+
+            return created_tasks
+
+        except Exception as e:
+            # Mark goal as failed
+            goal.fail(str(e))
+            raise
+
+    def get_goal(self, goal_id: str) -> Goal | None:
+        """Get goal by ID.
+
+        Args:
+            goal_id: Goal identifier
+
+        Returns:
+            Goal if found, None otherwise
+        """
+        return self._goals.get(goal_id)
+
+    def get_dependency_result(self, task_id: str) -> dict[str, Any] | None:
+        """Get the result of a completed dependency task.
+
+        Used by agents to retrieve dependency outputs via request_dependency.
+
+        Args:
+            task_id: Dependency task identifier
+
+        Returns:
+            Task result if task is completed, None otherwise
+        """
+        task = self._tasks.get(task_id)
+        if task is None or task.state != TaskState.SUCCESS:
+            return None
+        return task.result
+
     async def rebuild_from_events(self) -> None:
         """Rebuild orchestrator state from event log.
 
@@ -390,7 +558,23 @@ class Orchestrator:
         Args:
             event: Event to apply
         """
-        if event.type == EventType.TASK_CREATED and event.task_id:
+        if event.type == EventType.GOAL_SUBMITTED and event.goal_id:
+            goal = Goal(
+                id=event.goal_id,
+                description=event.payload.get("description", ""),
+                context=event.payload.get("context", {}),
+                constraints=event.payload.get("constraints", {}),
+            )
+            self._goals[event.goal_id] = goal
+
+        elif event.type == EventType.GOAL_DECOMPOSED and event.goal_id:
+            goal = self._goals.get(event.goal_id)
+            if goal:
+                task_ids = event.payload.get("task_ids", [])
+                goal.task_ids = task_ids
+                goal.state = GoalState.EXECUTING
+
+        elif event.type == EventType.TASK_CREATED and event.task_id:
             task = Task(
                 id=event.task_id,
                 goal_id=event.goal_id or "",

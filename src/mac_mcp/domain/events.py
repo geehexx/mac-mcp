@@ -106,6 +106,14 @@ class GoalSubmittedEvent(Event):
     payload: dict[str, Any]  # Contains: description, constraints, requester, priority
 
 
+class GoalDecomposedEvent(Event):
+    """Event emitted when a goal is decomposed into tasks."""
+
+    type: Literal[EventType.GOAL_DECOMPOSED] = EventType.GOAL_DECOMPOSED
+    goal_id: str
+    payload: dict[str, Any]  # Contains: task_ids, reasoning
+
+
 class TaskCreatedEvent(Event):
     """Event emitted when a new task is created."""
 
@@ -176,3 +184,11 @@ class AgentHeartbeatEvent(Event):
     type: Literal[EventType.AGENT_HEARTBEAT] = EventType.AGENT_HEARTBEAT
     agent_id: str
     payload: dict[str, Any]  # Contains: status, current_tasks, load
+
+
+class AgentFailedEvent(Event):
+    """Event emitted when an agent fails."""
+
+    type: Literal[EventType.AGENT_FAILED] = EventType.AGENT_FAILED
+    agent_id: str
+    payload: dict[str, Any]  # Contains: reason, last_heartbeat

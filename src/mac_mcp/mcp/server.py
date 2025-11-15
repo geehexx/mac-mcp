@@ -29,11 +29,33 @@ def create_server(
     """
     server = Server("mac-mcp")
 
-    # Tool 1: register_agent
     @server.list_tools()
     async def list_tools() -> list[Tool]:
         """List available tools."""
         return [
+            Tool(
+                name="submit_goal",
+                description="Submit a high-level goal for autonomous decomposition and execution",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "goal_id": {"type": "string", "description": "Unique goal identifier"},
+                        "description": {
+                            "type": "string",
+                            "description": "High-level goal description",
+                        },
+                        "context": {
+                            "type": "object",
+                            "description": "Additional context (language, framework, domain, etc.)",
+                        },
+                        "constraints": {
+                            "type": "object",
+                            "description": "Constraints (deadline, max_agents, etc.)",
+                        },
+                    },
+                    "required": ["goal_id", "description"],
+                },
+            ),
             Tool(
                 name="register_agent",
                 description="Register agent with orchestrator",
@@ -138,6 +160,21 @@ def create_server(
                 },
             ),
             Tool(
+                name="request_dependency",
+                description="Request the result of a completed dependency task",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "agent_id": {"type": "string"},
+                        "task_id": {
+                            "type": "string",
+                            "description": "ID of the dependency task",
+                        },
+                    },
+                    "required": ["agent_id", "task_id"],
+                },
+            ),
+            Tool(
                 name="heartbeat",
                 description="Agent liveness signal",
                 inputSchema={
@@ -166,6 +203,20 @@ def create_server(
     @server.call_tool()
     async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         """Handle tool calls."""
+        if name == "submit_goal":
+            goal = await orchestrator.submit_goal(
+                goal_id=arguments["goal_id"],
+                description=arguments["description"],
+                context=arguments.get("context"),
+                constraints=arguments.get("constraints"),
+            )
+            return [
+                TextContent(
+                    type="text",
+                    text=f"Goal {goal.id} submitted and decomposed into {len(goal.task_ids)} tasks",
+                )
+            ]
+
         if name == "register_agent":
             agent = await orchestrator.supervisor.register_agent(
                 agent_id=arguments["agent_id"],
@@ -232,6 +283,25 @@ def create_server(
                 TextContent(
                     type="text",
                     text=f"Task {arguments['task_id']} failed. Action: {action}",
+                )
+            ]
+
+        if name == "request_dependency":
+            result = orchestrator.get_dependency_result(arguments["task_id"])
+            if result is None:
+                return [
+                    TextContent(
+                        type="text",
+                        text=f"Dependency task {arguments['task_id']} not found or not completed",
+                    )
+                ]
+
+            import json
+
+            return [
+                TextContent(
+                    type="text",
+                    text=f"Dependency result: {json.dumps(result, indent=2)}",
                 )
             ]
 
