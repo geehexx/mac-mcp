@@ -1,11 +1,11 @@
 ---
 title: Multi-Agent Coordination MCP Server - Architecture Design
 description: Comprehensive system architecture and design patterns
-version: 1.0.0
+version: 1.1.0
 status: complete
 type: technical-specification
 category: architecture
-keywords: [architecture, design-patterns, supervisor-worker, actor-model, state-machine, event-sourcing]
+keywords: [architecture, design-patterns, supervisor-worker, actor-model, state-machine, event-sourcing, autonomous-agents]
 authors: [geehexx]
 created: 2025-11-15
 updated: 2025-11-15
@@ -15,17 +15,20 @@ schema_version: 1.0.0
 components:
   - goal_decomposer
   - agent_supervisor
-  - hitl_integrator
+  - dependency_manager
   - task_state_machine
   - event_log
-patterns: [actor-model, supervisor-worker, event-sourcing, state-machine]
+  - llm_provider
+  - configuration_system
+  - tui_dashboard
+patterns: [actor-model, supervisor-worker, event-sourcing, state-machine, autonomous-operation]
 ---
 
 # Multi-Agent Coordination MCP Server - Architecture Design
 
 ## Executive Summary
 
-The Multi-Agent Coordination (MAC) MCP Server is a protocol-sound orchestrator for autonomous LLM-based agent teams. It implements a **Supervisor/Worker** pattern with **Actor model** messaging, **state machine-based** task lifecycle management, and centralized **Human-in-the-Loop** (HITL) intervention. The architecture prioritizes protocol correctness, fault tolerance, and efficient communication over specific technology choices.
+The Multi-Agent Coordination (MAC) MCP Server is a protocol-sound orchestrator for fully autonomous LLM-based agent teams. It implements a **Supervisor/Worker** pattern with **Actor model** messaging, **state machine-based** task lifecycle management, and **LLM-powered autonomous goal decomposition**. The architecture prioritizes protocol correctness, fault tolerance, autonomous operation, and efficient communication over specific technology choices.
 
 ## Design Principles
 
@@ -47,10 +50,11 @@ The Multi-Agent Coordination (MAC) MCP Server is a protocol-sound orchestrator f
 - **Task Replay**: Failed tasks can be reassigned with full context
 - **Circuit Breaker**: Repeatedly failing agents are quarantined
 
-### 4. Human Integration
-- **Centralized HITL**: Only orchestrator requests human input
-- **Approval Workflows**: Task decomposition, critical decisions, and conflicts require approval
-- **Audit Trail**: All HITL interactions logged in event stream
+### 4. Autonomous Operation
+- **LLM-based Decomposition**: Goals autonomously decomposed into task DAGs using Claude
+- **No Human Intervention**: Pure agent-to-agent coordination
+- **Dependency Resolution**: Agents coordinate via orchestrator-mediated dependency requests
+- **Audit Trail**: All operations logged in event stream
 
 ---
 
@@ -69,11 +73,15 @@ The Multi-Agent Coordination (MAC) MCP Server is a protocol-sound orchestrator f
 ┌─────────────────────────────────────────────────────────┐
 │              MAC Orchestrator (MCP Server)               │
 │  ┌─────────────┐  ┌──────────────┐  ┌────────────────┐ │
-│  │   Goal      │  │    Agent     │  │      HITL      │ │
-│  │ Decomposer  │  │  Supervisor  │  │   Integrator   │ │
+│  │   Goal      │  │    Agent     │  │  Dependency    │ │
+│  │ Decomposer  │  │  Supervisor  │  │   Manager      │ │
+│  │  (Claude)   │  │              │  │                │ │
 │  └─────────────┘  └──────────────┘  └────────────────┘ │
 │  ┌─────────────────────────────────────────────────────┤ │
 │  │         Task State Machine & Event Log              │ │
+│  └─────────────────────────────────────────────────────┘ │
+│  ┌─────────────────────────────────────────────────────┤ │
+│  │     Configuration System & LLM Provider             │ │
 │  └─────────────────────────────────────────────────────┘ │
 └─────────────────────────────────────────────────────────┘
                            ▲
@@ -91,13 +99,18 @@ The Multi-Agent Coordination (MAC) MCP Server is a protocol-sound orchestrator f
 ### Component Responsibilities
 
 #### 1. Goal Decomposer
-**Purpose**: Transform complex goals into executable task DAGs (Directed Acyclic Graphs)
+**Purpose**: Transform complex goals into executable task DAGs (Directed Acyclic Graphs) autonomously
 
 **Operations**:
 - Parse natural language goals into structured task definitions
 - Build dependency graph (topological ordering)
 - Identify parallelizable vs sequential tasks
-- Request HITL approval for decomposition plan
+- Generate capability requirements for each task
+
+**LLM Integration**:
+- Uses configured LLM provider (Anthropic API or AWS Bedrock)
+- Structured prompts for consistent decomposition
+- Validates acyclic property of generated DAG
 
 **Output**: Task DAG with dependency edges
 
@@ -113,18 +126,18 @@ The Multi-Agent Coordination (MAC) MCP Server is a protocol-sound orchestrator f
 **Strategies**:
 - **Restart**: For transient failures (network timeout)
 - **Reassign**: For persistent failures (move task to different agent)
-- **Escalate**: For systemic failures (request HITL intervention)
+- **Quarantine**: For repeated failures (circuit breaker activation)
 
-#### 3. HITL Integrator
-**Purpose**: Centralized human intervention point
+#### 3. Dependency Manager
+**Purpose**: Mediate task-to-task dependencies
 
-**Trigger Conditions**:
-- Task decomposition approval (DAG review)
-- Conflict resolution (agents disagree on approach)
-- Critical decision points (flagged by agents)
-- Security/safety validation (before execution)
+**Operations**:
+- Track task completion states
+- Provide dependency results to requesting agents
+- Manage AWAITING state transitions
+- Ensure task order respects dependency graph
 
-**Interface**: MCP tool `request_human_input` with structured context
+**Interface**: MCP tool `request_dependency` for agents
 
 #### 4. Task State Machine & Event Log
 **Purpose**: Authoritative source of truth for all state
@@ -132,6 +145,39 @@ The Multi-Agent Coordination (MAC) MCP Server is a protocol-sound orchestrator f
 **Storage**: JSONL append-only log (event sourcing)
 
 **State Transitions**: See [Task Lifecycle](#task-lifecycle) section
+
+#### 5. Configuration System
+**Purpose**: Centralized, validated configuration management
+
+**Features**:
+- YAML configuration files
+- Environment variable support
+- Pydantic-based validation
+- Multi-provider LLM configuration
+
+**Configuration Domains**:
+- LLM Provider (Anthropic or Bedrock)
+- Server settings (transport, storage, heartbeat)
+- UI mode (TUI or headless)
+- Logging configuration
+
+#### 6. LLM Provider Abstraction
+**Purpose**: Support multiple LLM backends for goal decomposition
+
+**Implementations**:
+- **AnthropicProvider**: Direct Anthropic API integration
+- **BedrockProvider**: AWS Bedrock integration with boto3
+
+**Interface**: Abstract `LLMProvider` base class with `generate()` method
+
+#### 7. TUI Dashboard
+**Purpose**: Real-time monitoring and observability (optional)
+
+**Features**:
+- Live display of goals, tasks, and agents
+- Color-coded state indicators
+- Configurable refresh rate
+- Headless mode for production
 
 ---
 
@@ -148,14 +194,14 @@ The Multi-Agent Coordination (MAC) MCP Server is a protocol-sound orchestrator f
                          ┌──────────┐
                     ┌────┤  RUNNING │────┐
                     │    └─────┬────┘    │
-    requires_input  │          │         │ agent_failed
+    requires_depend │          │         │ agent_failed
                     │          │ completed│
                     ▼          ▼         ▼
               ┌──────────┐ ┌─────────┐ ┌───────┐
               │ AWAITING │ │ SUCCESS │ │ ERROR │ (Terminal states)
               └────┬─────┘ └─────────┘ └───┬───┘
                    │                        │
-                   │ input_provided         │ retry_approved
+                   │ dependency_resolved    │ retry_approved
                    ▼                        ▼
               ┌──────────┐            ┌──────────┐
               │  RUNNING │            │ PENDING  │
@@ -167,8 +213,8 @@ The Multi-Agent Coordination (MAC) MCP Server is a protocol-sound orchestrator f
 | State | Description | Transitions |
 |-------|-------------|-------------|
 | **PENDING** | Task created, waiting for capable agent | → RUNNING (agent claims), → BLOCKED (dependency) |
-| **RUNNING** | Agent actively executing task | → AWAITING (needs input), → SUCCESS, → ERROR |
-| **AWAITING** | Blocked on dependency/input | → RUNNING (dependency resolved) |
+| **RUNNING** | Agent actively executing task | → AWAITING (needs dependency), → SUCCESS, → ERROR |
+| **AWAITING** | Blocked on dependency task | → RUNNING (dependency resolved) |
 | **SUCCESS** | Task completed successfully | Terminal |
 | **ERROR** | Task failed permanently | → PENDING (retry), Terminal |
 | **BLOCKED** | Dependencies not met | → PENDING (dependencies ready) |
@@ -178,12 +224,14 @@ The Multi-Agent Coordination (MAC) MCP Server is a protocol-sound orchestrator f
 All state transitions are recorded as JSONL events:
 
 ```jsonl
-{"type":"task_created","task_id":"t1","goal":"Implement auth","dependencies":[],"timestamp":"2025-11-15T20:00:00Z"}
-{"type":"task_assigned","task_id":"t1","agent_id":"a1","timestamp":"2025-11-15T20:00:05Z"}
-{"type":"task_progress","task_id":"t1","agent_id":"a1","progress":0.3,"message":"Generated schema","timestamp":"2025-11-15T20:00:15Z"}
-{"type":"task_awaiting_input","task_id":"t1","agent_id":"a1","reason":"Choose OAuth provider","options":["Auth0","Cognito"],"timestamp":"2025-11-15T20:00:20Z"}
-{"type":"hitl_response","task_id":"t1","choice":"Auth0","timestamp":"2025-11-15T20:05:00Z"}
-{"type":"task_completed","task_id":"t1","agent_id":"a1","result":{"status":"success","artifact":"auth_module.py"},"timestamp":"2025-11-15T20:10:00Z"}
+{"type":"goal_submitted","goal_id":"g1","description":"Build REST API","sequence":1}
+{"type":"goal_decomposed","goal_id":"g1","payload":{"task_ids":["t1","t2","t3"],"reasoning":"..."},"sequence":2}
+{"type":"task_created","task_id":"t1","goal":"Implement auth","dependencies":[],"sequence":3}
+{"type":"task_assigned","task_id":"t1","agent_id":"a1","sequence":4}
+{"type":"task_progress","task_id":"t1","agent_id":"a1","progress":0.3,"message":"Generated schema","sequence":5}
+{"type":"dependency_requested","task_id":"t2","dependency_task_id":"t1","sequence":6}
+{"type":"task_completed","task_id":"t1","agent_id":"a1","result":{"artifacts":["auth.py"]},"sequence":7}
+{"type":"dependency_resolved","task_id":"t2","dependency_task_id":"t1","result":{...},"sequence":8}
 ```
 
 ---
@@ -218,7 +266,28 @@ Expose coordination state via read-only MCP resources:
 
 Orchestrator provides these tools for agent operations:
 
-#### 1. `register_agent`
+#### 1. `submit_goal`
+**Purpose**: Submit a high-level goal for autonomous decomposition
+
+**Parameters**:
+```json
+{
+  "goal_id": "unique-goal-identifier",
+  "description": "Build a REST API for user management",
+  "context": {
+    "language": "Python",
+    "framework": "FastAPI"
+  },
+  "constraints": {
+    "max_agents": 5,
+    "deadline": "2025-11-20"
+  }
+}
+```
+
+**Returns**: Goal confirmation with decomposition status
+
+#### 2. `register_agent`
 **Purpose**: Agent joins coordination network
 
 **Parameters**:
@@ -235,7 +304,7 @@ Orchestrator provides these tools for agent operations:
 
 **Returns**: Registration confirmation with orchestrator config
 
-#### 2. `claim_task`
+#### 3. `claim_task`
 **Purpose**: Agent requests work matching capabilities (pull model)
 
 **Parameters**:
@@ -248,7 +317,7 @@ Orchestrator provides these tools for agent operations:
 
 **Returns**: Task assignment or null if no matching work
 
-#### 3. `report_progress`
+#### 4. `report_progress`
 **Purpose**: Stream incremental progress updates
 
 **Parameters**:
@@ -264,20 +333,20 @@ Orchestrator provides these tools for agent operations:
 
 **Returns**: Acknowledgment
 
-#### 4. `request_dependency`
+#### 5. `request_dependency`
 **Purpose**: Request output from dependent task
 
 **Parameters**:
 ```json
 {
-  "task_id": "current-task",
-  "dependency_task_id": "prerequisite-task"
+  "agent_id": "agent-123",
+  "task_id": "prerequisite-task-id"
 }
 ```
 
-**Returns**: Dependency task result or AWAITING status
+**Returns**: Dependency task result or null if not completed
 
-#### 5. `complete_task`
+#### 6. `complete_task`
 **Purpose**: Mark task as successfully completed
 
 **Parameters**:
@@ -287,14 +356,15 @@ Orchestrator provides these tools for agent operations:
   "agent_id": "agent-123",
   "result": {
     "artifacts": ["src/auth.py", "tests/test_auth.py"],
-    "summary": "Implemented OAuth2 authentication"
+    "summary": "Implemented OAuth2 authentication",
+    "metrics": {"coverage": 0.95}
   }
 }
 ```
 
-**Returns**: Confirmation and next available task
+**Returns**: Confirmation
 
-#### 6. `fail_task`
+#### 7. `fail_task`
 **Purpose**: Report task failure with context
 
 **Parameters**:
@@ -310,9 +380,9 @@ Orchestrator provides these tools for agent operations:
 }
 ```
 
-**Returns**: Orchestrator decision (retry, reassign, escalate)
+**Returns**: Orchestrator decision (retry, reassign, fail)
 
-#### 7. `heartbeat`
+#### 8. `heartbeat`
 **Purpose**: Liveness signal from agent
 
 **Parameters**:
@@ -320,88 +390,12 @@ Orchestrator provides these tools for agent operations:
 {
   "agent_id": "agent-123",
   "status": "healthy",
-  "current_tasks": ["task-456"]
+  "current_tasks": ["task-456"],
+  "load": 0.6
 }
 ```
 
 **Returns**: Acknowledgment
-
-#### 8. `request_human_input`
-**Purpose**: Escalate decision to human (routed through orchestrator)
-
-**Parameters**:
-```json
-{
-  "task_id": "task-456",
-  "agent_id": "agent-123",
-  "question": "Should I use REST or GraphQL API?",
-  "context": {
-    "current_stack": "Node.js + PostgreSQL",
-    "tradeoffs": "..."
-  },
-  "options": ["REST", "GraphQL"],
-  "urgency": "medium"
-}
-```
-
-**Returns**: Human response (blocking call with timeout)
-
----
-
-## Message Schemas (JSONL)
-
-### Event Stream Format
-
-All events follow this envelope:
-
-```typescript
-{
-  type: string;           // Event type identifier
-  timestamp: string;      // ISO 8601 timestamp
-  task_id?: string;       // Related task (if applicable)
-  agent_id?: string;      // Related agent (if applicable)
-  goal_id?: string;       // Related goal (if applicable)
-  sequence: number;       // Monotonic sequence number
-  payload: object;        // Type-specific data
-}
-```
-
-### Core Event Types
-
-#### 1. Goal Events
-```jsonl
-{"type":"goal_submitted","goal_id":"g1","description":"Build authentication system","requester":"user@example.com","timestamp":"...","sequence":1}
-{"type":"goal_decomposed","goal_id":"g1","task_dag":{"nodes":[...],"edges":[...]},"timestamp":"...","sequence":2}
-{"type":"goal_approved","goal_id":"g1","approver":"human","timestamp":"...","sequence":3}
-```
-
-#### 2. Task Events
-```jsonl
-{"type":"task_created","task_id":"t1","goal_id":"g1","description":"Design database schema","dependencies":[],"required_capabilities":["database","sql"],"timestamp":"...","sequence":4}
-{"type":"task_assigned","task_id":"t1","agent_id":"a1","timestamp":"...","sequence":5}
-{"type":"task_progress","task_id":"t1","agent_id":"a1","progress":0.5,"message":"Created users table","timestamp":"...","sequence":6}
-{"type":"task_completed","task_id":"t1","agent_id":"a1","result":{...},"timestamp":"...","sequence":7}
-```
-
-#### 3. Agent Events
-```jsonl
-{"type":"agent_registered","agent_id":"a1","capabilities":["database","sql","postgresql"],"metadata":{...},"timestamp":"...","sequence":8}
-{"type":"agent_heartbeat","agent_id":"a1","status":"healthy","load":0.6,"timestamp":"...","sequence":9}
-{"type":"agent_failed","agent_id":"a1","reason":"timeout","timestamp":"...","sequence":10}
-{"type":"agent_quarantined","agent_id":"a1","failure_count":3,"timestamp":"...","sequence":11}
-```
-
-#### 4. HITL Events
-```jsonl
-{"type":"hitl_request","request_id":"h1","task_id":"t1","agent_id":"a1","question":"Approve schema design?","context":{...},"timestamp":"...","sequence":12}
-{"type":"hitl_response","request_id":"h1","response":"approved","details":{...},"timestamp":"...","sequence":13}
-```
-
-#### 5. Dependency Events
-```jsonl
-{"type":"dependency_requested","task_id":"t2","dependency_task_id":"t1","timestamp":"...","sequence":14}
-{"type":"dependency_resolved","task_id":"t2","dependency_task_id":"t1","result":{...},"timestamp":"...","sequence":15}
-```
 
 ---
 
@@ -458,9 +452,9 @@ Agent B                         Orchestrator                  Agent A
   │                                  │                              │
   │                     [Check task_A state]                        │
   │                                  │                              │
-  │<───result OR AWAITING────────────│                              │
+  │<───result OR null────────────────│                              │
   │                                  │                              │
-  [If AWAITING, Agent B transitions               [Agent A completes]
+  [If null, Agent B transitions               [Agent A completes]
    to AWAITING state and waits]                                    │
   │                                  │<──complete_task─────────────│
   │                                  │                              │
@@ -471,29 +465,27 @@ Agent B                         Orchestrator                  Agent A
 
 **Key Property**: Agents never communicate directly. Orchestrator mediates all data flow.
 
-### 5. HITL Escalation
+### 5. Goal Submission & Decomposition
 
 ```
-Agent                   Orchestrator                Human
-  │                          │                         │
-  │──request_human_input────>│                         │
-  │    (blocking call)       │                         │
-  │                          │                         │
-  │               [Transition task to                  │
-  │                AWAITING state]                     │
-  │                          │                         │
-  │                          │──HITL request (MCP)────>│
-  │                          │                         │
-  │                          │<──response──────────────│
-  │                          │                         │
-  │<───response──────────────│                         │
-  │                          │                         │
+Client                    Orchestrator                    LLM Provider
+  │                            │                                │
+  │──submit_goal──────────────>│                                │
+  │                            │                                │
+  │              [Create goal, start decomposition]             │
+  │                            │                                │
+  │                            │──decompose(goal)──────────────>│
+  │                            │                                │
+  │                            │<──task DAG─────────────────────│
+  │                            │                                │
+  │           [Create tasks from DAG, validate acyclic]         │
+  │                            │                                │
+  │<───goal_submitted──────────│                                │
+  │    (with task_ids)         │                                │
+  │                            │                                │
 ```
 
-**Timeout Handling**: If human doesn't respond within timeout, orchestrator can:
-- Use default/conservative choice
-- Reassign task to different agent
-- Mark task as ERROR with reason "hitl_timeout"
+**Autonomous Operation**: No human approval required. LLM decomposes and tasks are created immediately.
 
 ---
 
@@ -502,7 +494,7 @@ Agent                   Orchestrator                Human
 ### 1. Heartbeat Protocol
 
 **Configuration**:
-- **Interval**: 30 seconds (configurable)
+- **Interval**: 30 seconds (configurable via `MAC_SERVER_HEARTBEAT_INTERVAL`)
 - **Timeout**: 3 missed heartbeats = 90 seconds
 - **Failure Action**: Reassign in-progress tasks
 
@@ -528,7 +520,7 @@ class AgentSupervisor:
 | Network timeout | Yes | Retry same agent (max 3) |
 | Capability mismatch | No | Reassign to different agent |
 | Resource exhaustion | Yes | Retry after delay (exponential backoff) |
-| Logic error | No | Escalate to HITL |
+| Logic error | No | Mark as ERROR (terminal) |
 | Dependency failure | Yes | Wait for dependency retry |
 
 ### 3. Circuit Breaker
@@ -546,113 +538,186 @@ class AgentSupervisor:
 
 **Response**:
 1. Emit warning event
-2. Request HITL notification
-3. Continue executing non-dependent tasks
-4. Suggest manual completion or alternate approach
+2. Continue executing non-dependent tasks
+3. Mark dependent tasks as BLOCKED
+4. Log degraded state for monitoring
 
 ---
 
-## HITL Integration Design
+## Configuration System
 
-### Integration Points
+### Configuration Sources
 
-#### 1. Goal Approval
-**Trigger**: After goal decomposition into task DAG
-**Purpose**: Validate decomposition plan before execution
-**Interface**: Visual DAG representation + task descriptions
+**Priority Order** (highest to lowest):
+1. Command-line arguments (e.g., `mac-mcp config.yaml`)
+2. Environment variables (MAC_* prefix)
+3. Configuration file (YAML)
+4. Default values
 
-**Example Request**:
-```json
-{
-  "type": "goal_approval",
-  "goal": "Build user authentication system",
-  "proposed_dag": {
-    "tasks": [
-      {"id": "t1", "desc": "Design database schema"},
-      {"id": "t2", "desc": "Implement OAuth2 flow", "depends_on": ["t1"]},
-      {"id": "t3", "desc": "Add session management", "depends_on": ["t2"]},
-      {"id": "t4", "desc": "Write integration tests", "depends_on": ["t2", "t3"]}
-    ]
-  },
-  "estimated_time": "2 hours",
-  "agent_allocation": {"code_gen": 2, "testing": 1}
-}
+### Configuration Domains
+
+#### LLM Provider Configuration
+
+```yaml
+llm:
+  provider: "anthropic"  # or "bedrock"
+  model: "claude-sonnet-4-5-20250929"
+  api_key: "sk-..."  # For Anthropic
+  # Or for Bedrock:
+  # aws_region: "us-east-1"
+  # aws_profile: "default"
+  max_tokens: 4096
+  temperature: 0.7
 ```
 
-#### 2. Conflict Resolution
-**Trigger**: Multiple agents propose contradictory approaches
-**Purpose**: Human decides between competing solutions
-
-**Example**:
-```json
-{
-  "type": "conflict_resolution",
-  "task_id": "t2",
-  "conflict": "API design approach",
-  "proposals": [
-    {"agent": "a1", "approach": "REST", "rationale": "..."},
-    {"agent": "a2", "approach": "GraphQL", "rationale": "..."}
-  ]
-}
+**Environment Variables**:
+```bash
+MAC_LLM_PROVIDER=anthropic
+MAC_LLM_MODEL=claude-sonnet-4-5-20250929
+MAC_LLM_API_KEY=sk-...
 ```
 
-#### 3. Critical Decision
-**Trigger**: Agent flags decision as requiring human judgment
-**Purpose**: Security, compliance, or high-stakes choices
+#### Server Configuration
 
-**Example**:
-```json
-{
-  "type": "critical_decision",
-  "task_id": "t5",
-  "decision": "Store passwords using bcrypt or Argon2?",
-  "security_implications": "...",
-  "recommendations": [...]
-}
+```yaml
+server:
+  transport: "stdio"  # MCP transport mode
+  event_store_path: "data/events.jsonl"
+  max_agents: 100
+  heartbeat_interval: 30  # seconds
+  heartbeat_timeout: 90   # seconds
 ```
 
-#### 4. Error Escalation
-**Trigger**: Task failed multiple retries
-**Purpose**: Human diagnosis and intervention
+#### UI Configuration
 
-**Example**:
-```json
-{
-  "type": "error_escalation",
-  "task_id": "t3",
-  "failures": [
-    {"attempt": 1, "agent": "a1", "error": "..."},
-    {"attempt": 2, "agent": "a2", "error": "..."}
-  ],
-  "context": "All available agents failed on session storage implementation"
-}
+```yaml
+ui:
+  mode: "tui"  # or "headless"
+  refresh_interval: 1.0  # seconds
+  theme: "dark"
+  show_events: true
+  show_metrics: true
 ```
 
-### HITL Response Format
+#### Logging Configuration
 
-```json
-{
-  "request_id": "h123",
-  "decision": "approve|reject|modify",
-  "details": {
-    "selected_option": "...",
-    "modifications": [...],
-    "reasoning": "..."
-  },
-  "timestamp": "2025-11-15T20:30:00Z"
-}
+```yaml
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "logs/mac-mcp.log"
+  console: true
 ```
 
-### Headless Mode
+---
 
-**Configuration**: `--headless` flag or `MAC_HEADLESS=true`
+## LLM Provider Architecture
 
-**Behavior**:
-- HITL requests with `urgency: low` → Use default/conservative choice
-- HITL requests with `urgency: medium` → Wait with timeout, then default
-- HITL requests with `urgency: high` → Block indefinitely (log warning)
+### Provider Abstraction
 
-**Use Case**: CI/CD pipelines, automated workflows
+```python
+class LLMProvider(ABC):
+    @abstractmethod
+    async def generate(self, prompt: str, max_tokens: int, temperature: float) -> str:
+        """Generate text completion from LLM."""
+        pass
+
+    @abstractmethod
+    def get_model_name(self) -> str:
+        """Get model identifier."""
+        pass
+```
+
+### Anthropic Provider
+
+**Features**:
+- Direct Anthropic API integration
+- Uses `anthropic` Python SDK
+- Supports all Claude models
+
+**Configuration**:
+```python
+llm_config = LLMConfig(
+    provider="anthropic",
+    model="claude-sonnet-4-5-20250929",
+    api_key="sk-..."
+)
+```
+
+### AWS Bedrock Provider
+
+**Features**:
+- AWS Bedrock integration via boto3
+- Supports AWS credential chain (keys, profile, IAM role)
+- Regional deployment
+
+**Configuration**:
+```python
+llm_config = LLMConfig(
+    provider="bedrock",
+    model="anthropic.claude-3-5-sonnet-20241022-v2:0",
+    aws_region="us-east-1",
+    aws_profile="default"  # Or use aws_access_key_id/aws_secret_access_key
+)
+```
+
+**Credential Chain** (in order):
+1. Explicit `aws_access_key_id` and `aws_secret_access_key`
+2. AWS profile (`aws_profile`)
+3. Environment variables (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`)
+4. AWS credentials file (`~/.aws/credentials`)
+5. IAM role (for EC2/ECS/Lambda)
+
+---
+
+## TUI Dashboard
+
+### Features
+
+**Real-time Monitoring**:
+- Goals: ID, description, state, task count, progress
+- Tasks: ID, description, state, assigned agent, progress
+- Agents: ID, status, active tasks, success rate, capabilities
+- Events: Recent system events (optional)
+
+**Visual Design**:
+```
+┌────────────────────────────────────────────────────────┐
+│ Multi-Agent Coordination Server │ MAC MCP Dashboard │
+├────────────────┬───────────────────────────────────────┤
+│     Goals      │           Agents                       │
+│  ID │ State   │  ID  │ Status │ Tasks │ Success Rate   │
+│  g1 │EXECUTING│  a1  │ACTIVE  │   2   │    95%         │
+├────────────────┤───────────────────────────────────────┤
+│     Tasks      │          Events (Optional)             │
+│  ID │ State   │  Recent system events...               │
+│  t1 │SUCCESS  │                                        │
+│  t2 │RUNNING  │                                        │
+└────────────────┴───────────────────────────────────────┘
+│ Press Ctrl+C to exit  •  Refresh: 1.0s                 │
+└────────────────────────────────────────────────────────┘
+```
+
+**Color Coding**:
+- Green: SUCCESS, COMPLETED, ACTIVE states
+- Yellow: RUNNING, EXECUTING, BUSY states
+- Red: ERROR, FAILED, QUARANTINED states
+- Cyan: PENDING, SUBMITTED states
+- Magenta: AWAITING states
+
+### Modes
+
+**TUI Mode**: Full terminal UI with live updates
+```bash
+export MAC_UI_MODE=tui
+mac-mcp
+```
+
+**Headless Mode**: No UI (for production/CI)
+```bash
+export MAC_UI_MODE=headless
+mac-mcp
+```
 
 ---
 
@@ -672,7 +737,7 @@ class AgentSupervisor:
 
 **Pull Model Overhead**:
 - Agents poll orchestrator (potential latency)
-- **Mitigation**: WebSocket-based event notifications
+- **Mitigation**: Event-based notifications (future enhancement)
   - Agents maintain persistent connection
   - Orchestrator pushes "task_available" events
   - Agents respond with `claim_task` call
@@ -682,9 +747,9 @@ class AgentSupervisor:
 |-------|---------|-------------|--------------|
 | Push | Low (~10ms) | Medium | Poor |
 | Pull (polling) | High (~1s) | High | Excellent |
-| Pull (WebSocket) | Low (~50ms) | High | Excellent |
+| Pull (events) | Low (~50ms) | High | Excellent |
 
-**Recommendation**: WebSocket-enhanced pull model
+**Recommendation**: Pull with event notifications (future)
 
 ### 3. Dependency Graph Traversal
 
@@ -700,7 +765,7 @@ class AgentSupervisor:
 - **Benefit**: Complete audit trail, time-travel debugging
 - **Cost**: State reconstruction requires replay (O(N) events)
 
-**Mitigation**: Snapshot Strategy
+**Mitigation**: Snapshot Strategy (future enhancement)
 - Periodic snapshots of current state (every 1000 events)
 - Reconstruction = Load snapshot + Replay recent events
 - **Formula**: `reconstruction_time = snapshot_load + (events_since_snapshot * avg_event_process_time)`
@@ -713,7 +778,7 @@ class AgentSupervisor:
 
 **Problem**: Prevent agent impersonation (spoofing `agent_id`)
 
-**Solution**: API Key or JWT-based authentication
+**Solution**: API Key or JWT-based authentication (future enhancement)
 ```json
 {
   "agent_id": "a1",
@@ -731,7 +796,7 @@ class AgentSupervisor:
 
 **Problem**: Prevent event log tampering
 
-**Solution**: Message signing with HMAC-SHA256
+**Solution**: Message signing with HMAC-SHA256 (future enhancement)
 ```jsonl
 {"type":"task_completed","task_id":"t1","signature":"hmac_sha256_hex"}
 ```
@@ -765,7 +830,7 @@ class AgentSupervisor:
   - Access other agents' task details
   - Modify task definitions
   - Reassign tasks
-  - Access HITL responses directly (orchestrator mediates)
+  - Directly communicate with other agents
 
 ---
 
@@ -788,75 +853,86 @@ class SemanticMatcher(CapabilityMatcher):
 **Interface**:
 ```python
 class EventStore(Protocol):
-    def append(self, event: Event) -> None
-    def read(self, since: int) -> Iterator[Event]
-    def snapshot(self) -> State
+    async def append(self, event: Event) -> None
+    async def read(self, since: int = 0) -> AsyncIterator[Event]
+    async def get_latest_sequence(self) -> int
 ```
 
 **Implementations**:
 - `InMemoryEventStore`: For development/testing
-- `FileEventStore`: JSONL file (default)
-- `DatabaseEventStore`: PostgreSQL, SQLite (custom)
-- `StreamEventStore`: Kafka, Kinesis (high-throughput)
+- `JSONLEventStore`: JSONL file (default, implemented)
+- `DatabaseEventStore`: PostgreSQL, SQLite (future)
+- `StreamEventStore`: Kafka, Kinesis (future)
 
 ### 3. Goal Decomposition Strategies
 
 **Interface**:
 ```python
 class GoalDecomposer(Protocol):
-    def decompose(self, goal: str) -> TaskDAG
+    async def decompose(self, goal_id: str, description: str, context: dict, constraints: dict) -> TaskDAG
 ```
 
 **Implementations**:
-- `LLMDecomposer`: Use Claude to generate task breakdown (default)
-- `TemplateDecomposer`: Pattern-based (e.g., "implement feature X" → standard tasks)
-- `InteractiveDecomposer`: Prompt human for decomposition
+- `LLMDecomposer`: Use Claude to generate task breakdown (implemented)
+- `TemplateDecomposer`: Pattern-based (e.g., "implement feature X" → standard tasks) (future)
+- `HybridDecomposer`: LLM + templates (future)
 
-### 4. HITL Backends
+### 4. LLM Providers
 
 **Interface**:
 ```python
-class HITLBackend(Protocol):
-    def request_input(self, context: dict) -> str
+class LLMProvider(Protocol):
+    async def generate(self, prompt: str, max_tokens: int, temperature: float) -> str
+    def get_model_name(self) -> str
 ```
 
 **Implementations**:
-- `MCPHITLBackend`: Use existing hitl-mcp-cli server
-- `CLIHITLBackend`: Terminal prompts
-- `WebHITLBackend`: Web dashboard
-- `SlackHITLBackend`: Slack bot notifications
+- `AnthropicProvider`: Anthropic API (implemented)
+- `BedrockProvider`: AWS Bedrock (implemented)
+- `AzureProvider`: Azure OpenAI (future)
+- `LocalProvider`: Ollama, LM Studio (future)
 
 ---
 
 ## Deployment Modes
 
-### 1. Development Mode
+### 1. Development Mode (TUI)
 ```bash
-mac-mcp serve --mode dev --storage memory --hitl cli
+export MAC_LLM_API_KEY=sk-...
+export MAC_UI_MODE=tui
+mac-mcp
 ```
-- In-memory storage (no persistence)
-- CLI-based HITL prompts
+- In-memory or file-based storage
+- TUI dashboard for monitoring
 - Verbose logging
 - No authentication
 
-### 2. Production Mode
+### 2. Production Mode (Headless)
 ```bash
-mac-mcp serve --mode prod --storage file --hitl mcp --auth enabled
+mac-mcp config.yaml
 ```
+
+**config.yaml**:
+```yaml
+llm:
+  provider: "bedrock"
+  aws_region: "us-east-1"
+  aws_profile: "production"
+server:
+  event_store_path: "/var/lib/mac-mcp/events.jsonl"
+ui:
+  mode: "headless"
+logging:
+  level: "WARNING"
+  file: "/var/log/mac-mcp/server.log"
+```
+
 - File-based event store (JSONL)
-- MCP-based HITL integration
+- Headless mode (no UI)
 - Structured logging (JSON)
-- JWT authentication required
+- Authentication (future enhancement)
 
-### 3. Headless Mode
-```bash
-mac-mcp serve --headless --hitl-strategy conservative
-```
-- No human intervention
-- Use defaults for HITL requests
-- Suitable for CI/CD
-
-### 4. Distributed Mode (Future)
+### 3. Distributed Mode (Future Enhancement)
 ```bash
 mac-mcp serve --distributed --coordinator redis://...
 ```
@@ -871,122 +947,119 @@ mac-mcp serve --distributed --coordinator redis://...
 ### Scenario: "Build a REST API for user management"
 
 #### 1. Goal Submission
-```json
-{
-  "goal": "Build a REST API for user management with CRUD operations",
-  "constraints": {
+
+```bash
+# Via MCP tool
+submit_goal(
+  goal_id="g1",
+  description="Build a REST API for user management with CRUD operations",
+  context={
     "language": "Python",
     "framework": "FastAPI",
     "database": "PostgreSQL"
   }
-}
+)
 ```
 
-#### 2. Goal Decomposition (LLM-based)
+#### 2. Goal Decomposition (LLM-based, Autonomous)
+
+**Orchestrator calls LLM**:
+```python
+task_dag = await decomposer.decompose(
+    goal_id="g1",
+    description="Build a REST API for user management with CRUD operations",
+    context={"language": "Python", "framework": "FastAPI", "database": "PostgreSQL"},
+    constraints={}
+)
+```
+
+**LLM Returns**:
 ```json
 {
-  "task_dag": {
-    "tasks": [
-      {
-        "id": "t1",
-        "description": "Design database schema for users table",
-        "required_capabilities": ["database", "postgresql"],
-        "dependencies": []
-      },
-      {
-        "id": "t2",
-        "description": "Implement FastAPI models and schemas",
-        "required_capabilities": ["python", "fastapi"],
-        "dependencies": ["t1"]
-      },
-      {
-        "id": "t3",
-        "description": "Implement CRUD endpoints",
-        "required_capabilities": ["python", "fastapi"],
-        "dependencies": ["t2"]
-      },
-      {
-        "id": "t4",
-        "description": "Write integration tests",
-        "required_capabilities": ["python", "pytest"],
-        "dependencies": ["t3"]
-      },
-      {
-        "id": "t5",
-        "description": "Add API documentation",
-        "required_capabilities": ["documentation"],
-        "dependencies": ["t3"]
-      }
-    ]
-  }
+  "tasks": [
+    {
+      "id": "t1",
+      "description": "Design database schema for users table",
+      "required_capabilities": ["database", "postgresql"],
+      "dependencies": []
+    },
+    {
+      "id": "t2",
+      "description": "Implement FastAPI models and schemas",
+      "required_capabilities": ["python", "fastapi"],
+      "dependencies": ["t1"]
+    },
+    {
+      "id": "t3",
+      "description": "Implement CRUD endpoints",
+      "required_capabilities": ["python", "fastapi"],
+      "dependencies": ["t2"]
+    },
+    {
+      "id": "t4",
+      "description": "Write integration tests",
+      "required_capabilities": ["python", "pytest"],
+      "dependencies": ["t3"]
+    },
+    {
+      "id": "t5",
+      "description": "Add API documentation",
+      "required_capabilities": ["documentation"],
+      "dependencies": ["t3"]
+    }
+  ],
+  "edges": [["t1","t2"], ["t2","t3"], ["t3","t4"], ["t3","t5"]]
 }
 ```
 
-#### 3. HITL Approval Request
-```
-╔═══════════════════════════════════════════════════════════╗
-║  Goal Decomposition Approval Required                     ║
-╠═══════════════════════════════════════════════════════════╣
-║  Goal: Build REST API for user management                 ║
-║  Proposed Tasks: 5                                         ║
-║  Estimated Time: 3 hours                                   ║
-║  Required Agents: database(1), python(2), documentation(1) ║
-║                                                            ║
-║  Task DAG:                                                 ║
-║    t1 (Design schema)                                      ║
-║     └─> t2 (FastAPI models)                                ║
-║          └─> t3 (CRUD endpoints)                           ║
-║               ├─> t4 (Tests)                               ║
-║               └─> t5 (Docs)                                ║
-║                                                            ║
-║  Approve? [Y/n/modify]:                                    ║
-╚═══════════════════════════════════════════════════════════╝
-```
+**No approval needed** - tasks created immediately.
 
-#### 4. Agent Registration
+#### 3. Agent Registration
+
 ```jsonl
-{"type":"agent_registered","agent_id":"db_agent","capabilities":["database","postgresql","sql"],"timestamp":"..."}
-{"type":"agent_registered","agent_id":"py_agent_1","capabilities":["python","fastapi","sqlalchemy"],"timestamp":"..."}
-{"type":"agent_registered","agent_id":"py_agent_2","capabilities":["python","fastapi","pytest"],"timestamp":"..."}
-{"type":"agent_registered","agent_id":"doc_agent","capabilities":["documentation","openapi"],"timestamp":"..."}
+{"type":"agent_registered","agent_id":"db_agent","capabilities":["database","postgresql","sql"],"sequence":1}
+{"type":"agent_registered","agent_id":"py_agent_1","capabilities":["python","fastapi","sqlalchemy"],"sequence":2}
+{"type":"agent_registered","agent_id":"py_agent_2","capabilities":["python","fastapi","pytest"],"sequence":3}
+{"type":"agent_registered","agent_id":"doc_agent","capabilities":["documentation","openapi"],"sequence":4}
 ```
 
-#### 5. Task Execution (Event Stream)
+#### 4. Task Execution (Event Stream)
+
 ```jsonl
-{"type":"task_created","task_id":"t1","description":"Design database schema","state":"PENDING","timestamp":"..."}
-{"type":"task_assigned","task_id":"t1","agent_id":"db_agent","timestamp":"..."}
-{"type":"task_progress","task_id":"t1","progress":0.5,"message":"Created users table definition","timestamp":"..."}
-{"type":"task_completed","task_id":"t1","result":{"artifact":"schema.sql"},"timestamp":"..."}
+{"type":"goal_submitted","goal_id":"g1","description":"Build REST API...","sequence":5}
+{"type":"goal_decomposed","goal_id":"g1","payload":{"task_ids":["t1","t2","t3","t4","t5"],"reasoning":"..."},"sequence":6}
+{"type":"task_created","task_id":"t1","description":"Design database schema","state":"PENDING","sequence":7}
+{"type":"task_assigned","task_id":"t1","agent_id":"db_agent","sequence":8}
+{"type":"task_progress","task_id":"t1","progress":0.5,"message":"Created users table definition","sequence":9}
+{"type":"task_completed","task_id":"t1","result":{"artifact":"schema.sql"},"sequence":10}
 
-{"type":"task_created","task_id":"t2","state":"PENDING","timestamp":"..."}
-{"type":"task_assigned","task_id":"t2","agent_id":"py_agent_1","timestamp":"..."}
-{"type":"dependency_requested","task_id":"t2","dependency":"t1","timestamp":"..."}
-{"type":"dependency_resolved","task_id":"t2","dependency":"t1","result":{"artifact":"schema.sql"},"timestamp":"..."}
-{"type":"task_progress","task_id":"t2","progress":0.7,"message":"Generated Pydantic models","timestamp":"..."}
-{"type":"task_completed","task_id":"t2","result":{"artifacts":["models.py","schemas.py"]},"timestamp":"..."}
+{"type":"task_created","task_id":"t2","state":"PENDING","sequence":11}
+{"type":"task_assigned","task_id":"t2","agent_id":"py_agent_1","sequence":12}
+{"type":"dependency_requested","agent_id":"py_agent_1","task_id":"t1","sequence":13}
+{"type":"dependency_resolved","task_id":"t2","dependency_task_id":"t1","result":{"artifact":"schema.sql"},"sequence":14}
+{"type":"task_progress","task_id":"t2","progress":0.7,"message":"Generated Pydantic models","sequence":15}
+{"type":"task_completed","task_id":"t2","result":{"artifacts":["models.py","schemas.py"]},"sequence":16}
 
-{"type":"task_created","task_id":"t3","state":"PENDING","timestamp":"..."}
-{"type":"task_assigned","task_id":"t3","agent_id":"py_agent_1","timestamp":"..."}
-{"type":"task_awaiting_input","task_id":"t3","reason":"Endpoint authentication strategy","timestamp":"..."}
-{"type":"hitl_request","request_id":"h1","question":"Use JWT or session-based auth?","options":["JWT","Session"],"timestamp":"..."}
-{"type":"hitl_response","request_id":"h1","choice":"JWT","timestamp":"..."}
-{"type":"task_progress","task_id":"t3","progress":1.0,"message":"Implemented all CRUD endpoints with JWT auth","timestamp":"..."}
-{"type":"task_completed","task_id":"t3","result":{"artifacts":["routes.py","auth.py"]},"timestamp":"..."}
+{"type":"task_created","task_id":"t3","state":"PENDING","sequence":17}
+{"type":"task_assigned","task_id":"t3","agent_id":"py_agent_1","sequence":18}
+{"type":"task_progress","task_id":"t3","progress":1.0,"message":"Implemented all CRUD endpoints","sequence":19}
+{"type":"task_completed","task_id":"t3","result":{"artifacts":["routes.py"]},"sequence":20}
 
-{"type":"task_created","task_id":"t4","state":"PENDING","timestamp":"..."}
-{"type":"task_created","task_id":"t5","state":"PENDING","timestamp":"..."}
-{"type":"task_assigned","task_id":"t4","agent_id":"py_agent_2","timestamp":"..."}
-{"type":"task_assigned","task_id":"t5","agent_id":"doc_agent","timestamp":"..."}
+{"type":"task_created","task_id":"t4","state":"PENDING","sequence":21}
+{"type":"task_created","task_id":"t5","state":"PENDING","sequence":22}
+{"type":"task_assigned","task_id":"t4","agent_id":"py_agent_2","sequence":23}
+{"type":"task_assigned","task_id":"t5","agent_id":"doc_agent","sequence":24}
 
 [Both t4 and t5 execute in parallel]
 
-{"type":"task_completed","task_id":"t4","result":{"artifacts":["test_routes.py"],"test_coverage":0.95},"timestamp":"..."}
-{"type":"task_completed","task_id":"t5","result":{"artifacts":["README.md","openapi.yaml"]},"timestamp":"..."}
+{"type":"task_completed","task_id":"t4","result":{"artifacts":["test_routes.py"],"test_coverage":0.95},"sequence":25}
+{"type":"task_completed","task_id":"t5","result":{"artifacts":["README.md","openapi.yaml"]},"sequence":26}
 
-{"type":"goal_completed","goal_id":"g1","success":true,"total_time":"2.5h","timestamp":"..."}
+{"type":"goal_completed","goal_id":"g1","success":true,"total_time":"2.5h","sequence":27}
 ```
 
-#### 6. Final Result
+#### 5. Final Result
+
 ```json
 {
   "goal_id": "g1",
@@ -996,7 +1069,6 @@ mac-mcp serve --distributed --coordinator redis://...
     "models.py",
     "schemas.py",
     "routes.py",
-    "auth.py",
     "test_routes.py",
     "README.md",
     "openapi.yaml"
@@ -1004,7 +1076,6 @@ mac-mcp serve --distributed --coordinator redis://...
   "metrics": {
     "total_time": "2.5 hours",
     "tasks_completed": 5,
-    "hitl_interventions": 2,
     "agent_failures": 0
   }
 }
@@ -1019,12 +1090,12 @@ mac-mcp serve --distributed --coordinator redis://...
 | Aspect | MAC (Orchestration) | Choreography |
 |--------|---------------------|--------------|
 | **Coordination** | Centralized | Distributed |
-| **HITL Integration** | Single point | Multiple points |
+| **Dependency Management** | Single point | Multiple points |
 | **Debugging** | Complete audit trail | Partial logs |
 | **Fault Tolerance** | Supervisor handles | Peer recovery |
 | **Complexity** | O(N) connections | O(N²) connections |
 
-**Verdict**: Orchestration is superior for HITL integration and debuggability.
+**Verdict**: Orchestration is superior for dependency management and debuggability.
 
 ### vs. Shared Blackboard Architecture
 
@@ -1043,88 +1114,88 @@ mac-mcp serve --distributed --coordinator redis://...
 |--------|-----|------------------|
 | **Agent Dynamism** | Agents join/leave | Static workers |
 | **Capability Matching** | First-class | Manual configuration |
-| **HITL** | Built-in | Plugin required |
-| **LLM-Centric** | Yes | No |
+| **LLM Integration** | Built-in | Plugin required |
+| **Autonomous Operation** | Native | Not designed for |
 
-**Verdict**: MAC is purpose-built for LLM agents; workflow engines are general-purpose.
+**Verdict**: MAC is purpose-built for autonomous LLM agents; workflow engines are general-purpose.
 
 ---
 
-## Open Questions & Future Work
+## Future Enhancements
 
-### 1. Multi-Tenancy
-**Question**: How to isolate goals from different users?
+### 1. Web-based Dashboard
+**Description**: Browser-based monitoring UI
+
+**Features**:
+- Real-time WebSocket updates
+- Interactive goal/task visualization
+- Agent health dashboards
+- Historical metrics and analytics
+
+**Status**: Documented for future implementation
+
+### 2. Multi-Tenancy
+**Description**: Isolate goals from different users
 
 **Proposal**: Namespace isolation
 - Goal IDs prefixed with tenant: `{tenant_id}:{goal_id}`
 - Agents register per-tenant
 - Event streams partitioned by tenant
 
-### 2. Agent Pricing & Cost Optimization
-**Question**: How to allocate expensive LLM calls efficiently?
+### 3. Agent Pricing & Cost Optimization
+**Description**: Allocate expensive LLM calls efficiently
 
 **Proposal**: Cost-aware scheduling
 - Agents declare cost per task (e.g., API credits)
 - Orchestrator optimizes for cost + time trade-off
 - Cheaper agents preferred for low-priority tasks
 
-### 3. Cross-Goal Learning
-**Question**: Can agents learn from past goal executions?
+### 4. Cross-Goal Learning
+**Description**: Learn from past goal executions
 
 **Proposal**: Decomposition templates
 - Successful DAGs stored as templates
 - Similar goals reuse templates (faster decomposition)
 - Embedding-based similarity search
 
-### 4. Adversarial Agents
-**Question**: How to handle malicious or compromised agents?
+### 5. Performance Metrics in TUI
+**Description**: Display system performance metrics
 
-**Proposal**: Reputation system
-- Track success rate per agent
-- Isolate low-reputation agents
-- Multi-agent verification for critical tasks
-
-### 5. Dynamic Re-planning
-**Question**: What if initial task decomposition is wrong?
-
-**Proposal**: Adaptive DAG rewriting
-- Agents can propose DAG modifications
-- Requires HITL approval
-- Event log preserves history
+**Features**:
+- Task throughput (tasks/hour)
+- Agent utilization (% busy)
+- Goal completion time (avg, p50, p99)
+- Error rates and retry counts
 
 ---
 
-## Implementation Roadmap
+## Implementation Status
 
-### Phase 1: Core Orchestrator (MVP)
-- [ ] Event store (JSONL file backend)
-- [ ] Task state machine
-- [ ] Agent registration and heartbeat
-- [ ] Basic task assignment (pull model)
-- [ ] MCP server implementation
+### Completed Features
+- ✅ Event store (JSONL file backend)
+- ✅ Task state machine
+- ✅ Agent registration and heartbeat
+- ✅ Task assignment (pull model)
+- ✅ MCP server implementation
+- ✅ Goal domain model
+- ✅ Autonomous goal decomposition (LLM-based)
+- ✅ Dependency resolution
+- ✅ Configuration system (YAML + env vars)
+- ✅ LLM provider abstraction
+- ✅ Anthropic provider
+- ✅ AWS Bedrock provider
+- ✅ TUI dashboard (Rich-based)
 
-### Phase 2: HITL Integration
-- [ ] CLI-based HITL backend
-- [ ] MCP-based HITL integration
-- [ ] Goal approval workflow
-- [ ] Error escalation
-
-### Phase 3: Advanced Features
-- [ ] Dependency graph optimization
-- [ ] WebSocket-based task notifications
-- [ ] Agent capability matching (semantic)
-- [ ] Snapshot-based state reconstruction
-
-### Phase 4: Production Hardening
-- [ ] Authentication (JWT)
-- [ ] Message signing (HMAC)
-- [ ] Rate limiting and quotas
-- [ ] Monitoring and metrics
-
-### Phase 5: Scalability
-- [ ] Distributed orchestrator (Redis coordination)
-- [ ] Pluggable storage backends (PostgreSQL, Kafka)
-- [ ] Multi-tenancy support
+### Future Enhancements
+- ⏳ Web-based dashboard
+- ⏳ Agent authentication (JWT)
+- ⏳ Message signing (HMAC)
+- ⏳ Rate limiting and quotas
+- ⏳ Monitoring and metrics
+- ⏳ Distributed orchestrator (Redis coordination)
+- ⏳ Pluggable storage backends (PostgreSQL, Kafka)
+- ⏳ Multi-tenancy support
+- ⏳ Performance metrics in TUI
 
 ---
 
@@ -1140,7 +1211,8 @@ The Multi-Agent Coordination MCP Server architecture is grounded in proven distr
 The design prioritizes:
 1. **Protocol soundness** over implementation shortcuts
 2. **Agent autonomy** within orchestrator guardrails
-3. **Human agency** through centralized HITL integration
+3. **Autonomous operation** through LLM-powered decomposition
 4. **Operational transparency** via JSONL event streams
+5. **Flexibility** through configuration and provider abstraction
 
-This architecture provides a **robust, scalable, and debuggable** foundation for building multi-agent AI systems that are safe, efficient, and aligned with human intent.
+This architecture provides a **robust, scalable, and debuggable** foundation for building multi-agent AI systems that are autonomous, efficient, and maintainable.
