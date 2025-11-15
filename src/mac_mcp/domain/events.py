@@ -35,10 +35,6 @@ class EventType(str, Enum):
     AGENT_FAILED = "agent_failed"
     AGENT_QUARANTINED = "agent_quarantined"
 
-    # HITL events
-    HITL_REQUEST = "hitl_request"
-    HITL_RESPONSE = "hitl_response"
-
     # Dependency events
     DEPENDENCY_REQUESTED = "dependency_requested"
     DEPENDENCY_RESOLVED = "dependency_resolved"
@@ -180,20 +176,3 @@ class AgentHeartbeatEvent(Event):
     type: Literal[EventType.AGENT_HEARTBEAT] = EventType.AGENT_HEARTBEAT
     agent_id: str
     payload: dict[str, Any]  # Contains: status, current_tasks, load
-
-
-class HITLRequestEvent(Event):
-    """Event emitted when HITL input is requested."""
-
-    type: Literal[EventType.HITL_REQUEST] = EventType.HITL_REQUEST
-    task_id: str
-    agent_id: str
-    payload: dict[str, Any]  # Contains: request_id, question, context, options, urgency
-
-
-class HITLResponseEvent(Event):
-    """Event emitted when HITL response is received."""
-
-    type: Literal[EventType.HITL_RESPONSE] = EventType.HITL_RESPONSE
-    task_id: str
-    payload: dict[str, Any]  # Contains: request_id, response, responder

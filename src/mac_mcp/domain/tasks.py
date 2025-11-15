@@ -19,7 +19,7 @@ class TaskState(str, Enum):
 
     PENDING = "PENDING"  # Created, waiting for agent
     RUNNING = "RUNNING"  # Agent actively executing
-    AWAITING = "AWAITING"  # Blocked on dependency or HITL
+    AWAITING = "AWAITING"  # Blocked on dependency task
     SUCCESS = "SUCCESS"  # Completed successfully (terminal)
     ERROR = "ERROR"  # Failed permanently (terminal)
     BLOCKED = "BLOCKED"  # Dependencies not satisfied

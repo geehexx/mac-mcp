@@ -4,7 +4,7 @@ The orchestrator is the central coordination point implementing:
 - Goal decomposition
 - Task assignment
 - State machine enforcement
-- HITL integration
+- Dependency management
 """
 
 from typing import Any

@@ -20,15 +20,15 @@ schema_version: 1.0.0
 
 ## Overview
 
-The **Multi-Agent Coordination (MAC) MCP Server** is a central orchestrator that coordinates teams of autonomous AI agents to accomplish complex goals. Built on the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/), it provides robust task decomposition, state management, fault tolerance, and human-in-the-loop (HITL) integration.
+The **Multi-Agent Coordination (MAC) MCP Server** is a central orchestrator that coordinates teams of autonomous AI agents to accomplish complex goals. Built on the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/), it provides robust goal decomposition, task assignment, state management, and fault tolerance for fully autonomous multi-agent workflows.
 
 ### Key Features
 
-- **🎯 Goal Decomposition**: Transforms complex goals into executable task graphs (DAGs)
+- **🎯 Autonomous Goal Decomposition**: LLM-based decomposition of complex goals into executable task graphs (DAGs)
 - **🤖 Agent Orchestration**: Supervisor/Worker pattern with capability-based task assignment
 - **🔄 State Management**: Deterministic state machine with event sourcing (JSONL format)
 - **🛡️ Fault Tolerance**: Heartbeat monitoring, automatic task reassignment, circuit breakers
-- **👤 Human Integration**: Centralized HITL for approvals, conflict resolution, and critical decisions
+- **🔗 Dependency Resolution**: Agents coordinate via dependency requests (no direct communication)
 - **📊 Observable**: Complete audit trail with real-time event streaming
 - **🔌 MCP-Native**: Built on standard MCP tools and resources
 
@@ -47,8 +47,9 @@ The **Multi-Agent Coordination (MAC) MCP Server** is a central orchestrator that
 ┌─────────────────────────────────────────────────────────┐
 │              MAC Orchestrator (MCP Server)               │
 │  ┌─────────────┐  ┌──────────────┐  ┌────────────────┐ │
-│  │   Goal      │  │    Agent     │  │      HITL      │ │
-│  │ Decomposer  │  │  Supervisor  │  │   Integrator   │ │
+│  │   Goal      │  │    Agent     │  │  Dependency    │ │
+│  │ Decomposer  │  │  Supervisor  │  │   Manager      │ │
+│  │  (Claude)   │  │              │  │                │ │
 │  └─────────────┘  └──────────────┘  └────────────────┘ │
 │  └─────────────────────────────────────────────────────┤ │
 │              Task State Machine & Event Log             │
@@ -72,7 +73,7 @@ The **Multi-Agent Coordination (MAC) MCP Server** is a central orchestrator that
 2. **Supervisor Pattern**: Orchestrator monitors agent health and handles failures
 3. **Event Sourcing**: All state changes recorded as immutable JSONL events
 4. **Pull-based Dispatch**: Agents request work matching their capabilities (not pushed)
-5. **Human Primacy**: HITL requests take precedence over agent autonomy
+5. **Autonomous Operation**: Fully autonomous goal decomposition and task execution
 
 ## Quick Start
 
@@ -115,9 +116,9 @@ storage:
   backend: file  # file | memory | database
   path: ./events.jsonl
 
-hitl:
-  backend: cli  # cli | mcp | web
-  strategy: interactive  # interactive | conservative | default
+decomposer:
+  backend: claude  # claude | template | hybrid
+  model: claude-sonnet-4  # Model for goal decomposition
 ```
 
 ## Documentation
@@ -133,7 +134,7 @@ hitl:
 
 - **[Task Lifecycle](./ARCHITECTURE.md#task-lifecycle)** - State machine and transitions
 - **[Agent Communication](./ARCHITECTURE.md#agent-communication-patterns)** - Pull-based task claiming, progress streaming
-- **[HITL Integration](./ARCHITECTURE.md#hitl-integration-design)** - Human intervention points and workflows
+- **[Dependency Resolution](./ARCHITECTURE.md#agent-communication-patterns)** - Agent-to-agent coordination via orchestrator
 - **[Fault Tolerance](./ARCHITECTURE.md#fault-tolerance-mechanisms)** - Heartbeats, retries, circuit breakers
 
 ## Example Workflow
@@ -154,9 +155,9 @@ graph TD
 ```jsonl
 {"type":"goal_submitted","goal_id":"g1","description":"Build REST API...","sequence":1}
 {"type":"goal_decomposed","goal_id":"g1","payload":{"task_dag":{...}},"sequence":2}
-{"type":"hitl_request","payload":{"question":"Approve decomposition?"},"sequence":3}
-{"type":"hitl_response","payload":{"decision":"approve"},"sequence":4}
-{"type":"agent_registered","agent_id":"db_agent","capabilities":["database","postgresql"],"sequence":5}
+{"type":"agent_registered","agent_id":"db_agent","capabilities":["database","postgresql"],"sequence":3}
+{"type":"task_created","task_id":"t1","description":"Design DB schema","sequence":4}
+{"type":"task_assigned","task_id":"t1","agent_id":"db_agent","sequence":5}
 {"type":"task_assigned","task_id":"t1","agent_id":"db_agent","sequence":6}
 {"type":"task_progress","task_id":"t1","payload":{"progress":0.5,"message":"Created users table"},"sequence":7}
 {"type":"task_completed","task_id":"t1","payload":{"result":{...}},"sequence":8}
@@ -171,6 +172,7 @@ See [ARCHITECTURE.md Example Workflow](./ARCHITECTURE.md#example-workflow) for c
 
 The orchestrator exposes 8 MCP tools for agents:
 
+- `submit_goal` - Submit goal for autonomous decomposition
 - `register_agent` - Join coordination network
 - `claim_task` - Request work matching capabilities
 - `report_progress` - Stream task updates
@@ -178,7 +180,6 @@ The orchestrator exposes 8 MCP tools for agents:
 - `fail_task` - Report task failure
 - `request_dependency` - Get output from prerequisite tasks
 - `heartbeat` - Liveness signal
-- `request_human_input` - Escalate to HITL
 
 ### Resources Exposed
 
@@ -232,7 +233,7 @@ MAC is built on well-researched distributed systems patterns:
 
 | Feature | MAC | Choreography | Blackboard | Workflow Engines |
 |---------|-----|--------------|------------|------------------|
-| **HITL Integration** | Centralized | Distributed | Manual | Plugin Required |
+| **Autonomous Operation** | Full | Partial | Partial | Limited |
 | **Agent Isolation** | Enforced | Optional | Shared Memory | N/A |
 | **Audit Trail** | Complete | Partial | None | Limited |
 | **LLM-Centric** | Yes | No | Partial | No |
@@ -245,7 +246,7 @@ See [ARCHITECTURE.md Comparison](./ARCHITECTURE.md#comparison-with-alternative-a
 
 ### Authentication
 - JWT-based agent authentication (recommended)
-- API keys for human HITL integration
+- API keys for external system integration
 - Token expiration and refresh
 
 ### Message Integrity
@@ -262,7 +263,7 @@ See [ARCHITECTURE.md Comparison](./ARCHITECTURE.md#comparison-with-alternative-a
 ### Access Control
 - Agents access only assigned tasks
 - Dependency results mediated by orchestrator
-- HITL responses not directly accessible
+- Event log is append-only (agents cannot modify history)
 
 See [PROTOCOL.md Security Requirements](./PROTOCOL.md#security-requirements) for full specification.
 
@@ -279,11 +280,12 @@ See [PROTOCOL.md Security Requirements](./PROTOCOL.md#security-requirements) for
 - [ ] Basic task assignment (pull model)
 - [ ] MCP server implementation
 
-#### Phase 2: HITL Integration
-- [ ] CLI-based HITL backend
-- [ ] MCP-based HITL integration
-- [ ] Goal approval workflow
-- [ ] Error escalation
+#### Phase 2: Autonomous Goal Decomposition
+- [ ] Implement submit_goal MCP tool
+- [ ] LLM-based goal decomposer (Claude API)
+- [ ] Implement request_dependency tool
+- [ ] Goal completion aggregation
+- [ ] Multi-goal parallelism
 
 #### Phase 3: Advanced Features
 - [ ] Dependency graph optimization
@@ -329,9 +331,9 @@ ruff check .
 
 ## Related Projects
 
-- **[hitl-mcp-cli](https://github.com/geehexx/hitl-mcp-cli)** - Human-in-the-Loop tool via MCP (inspiration for HITL integration)
 - **[Model Context Protocol](https://modelcontextprotocol.io/)** - Protocol specification
 - **[Claude Desktop](https://claude.ai/download)** - MCP client reference implementation
+- **[Anthropic API](https://docs.anthropic.com/)** - Claude API for goal decomposition
 
 ## Research & References
 
