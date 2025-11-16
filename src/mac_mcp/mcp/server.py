@@ -55,6 +55,17 @@ def create_server(
                     },
                     "required": ["goal_id", "description"],
                 },
+                # MCP 2025: Structured output schema for typed responses
+                outputSchema={
+                    "type": "object",
+                    "properties": {
+                        "goal_id": {"type": "string"},
+                        "state": {"type": "string", "enum": ["SUBMITTED", "EXECUTING", "COMPLETED", "FAILED"]},
+                        "task_count": {"type": "integer"},
+                        "task_ids": {"type": "array", "items": {"type": "string"}},
+                    },
+                    "required": ["goal_id", "state", "task_count"],
+                },
             ),
             Tool(
                 name="register_agent",
@@ -75,6 +86,17 @@ def create_server(
                     },
                     "required": ["agent_id", "capabilities"],
                 },
+                # MCP 2025: Structured output schema
+                outputSchema={
+                    "type": "object",
+                    "properties": {
+                        "agent_id": {"type": "string"},
+                        "capabilities": {"type": "array", "items": {"type": "string"}},
+                        "status": {"type": "string", "enum": ["active", "idle", "failed", "quarantined"]},
+                        "registered_at": {"type": "string", "format": "date-time"},
+                    },
+                    "required": ["agent_id", "capabilities", "status"],
+                },
             ),
             Tool(
                 name="claim_task",
@@ -89,6 +111,18 @@ def create_server(
                         },
                     },
                     "required": ["agent_id", "capabilities"],
+                },
+                # MCP 2025: Structured output schema
+                outputSchema={
+                    "type": "object",
+                    "properties": {
+                        "task_id": {"type": ["string", "null"]},
+                        "description": {"type": "string"},
+                        "goal_id": {"type": "string"},
+                        "required_capabilities": {"type": "array", "items": {"type": "string"}},
+                        "dependencies": {"type": "array", "items": {"type": "string"}},
+                        "state": {"type": "string"},
+                    },
                 },
             ),
             Tool(
@@ -111,6 +145,16 @@ def create_server(
                         },
                     },
                     "required": ["task_id", "agent_id", "progress"],
+                },
+                # MCP 2025: Structured output schema
+                outputSchema={
+                    "type": "object",
+                    "properties": {
+                        "task_id": {"type": "string"},
+                        "progress": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+                        "updated_at": {"type": "string", "format": "date-time"},
+                    },
+                    "required": ["task_id", "progress"],
                 },
             ),
             Tool(
@@ -136,6 +180,17 @@ def create_server(
                     },
                     "required": ["task_id", "agent_id", "result"],
                 },
+                # MCP 2025: Structured output schema
+                outputSchema={
+                    "type": "object",
+                    "properties": {
+                        "task_id": {"type": "string"},
+                        "state": {"type": "string", "enum": ["SUCCESS"]},
+                        "completed_at": {"type": "string", "format": "date-time"},
+                        "next_tasks": {"type": "array", "items": {"type": "string"}, "description": "Unblocked tasks"},
+                    },
+                    "required": ["task_id", "state"],
+                },
             ),
             Tool(
                 name="fail_task",
@@ -158,6 +213,17 @@ def create_server(
                     },
                     "required": ["task_id", "agent_id", "error"],
                 },
+                # MCP 2025: Structured output schema
+                outputSchema={
+                    "type": "object",
+                    "properties": {
+                        "task_id": {"type": "string"},
+                        "action": {"type": "string", "enum": ["retry", "error"], "description": "retry or error"},
+                        "retry_count": {"type": "integer"},
+                        "state": {"type": "string", "enum": ["PENDING", "ERROR"]},
+                    },
+                    "required": ["task_id", "action", "state"],
+                },
             ),
             Tool(
                 name="request_dependency",
@@ -172,6 +238,16 @@ def create_server(
                         },
                     },
                     "required": ["agent_id", "task_id"],
+                },
+                # MCP 2025: Structured output schema
+                outputSchema={
+                    "type": "object",
+                    "properties": {
+                        "task_id": {"type": "string"},
+                        "result": {"type": "object", "description": "Task result data"},
+                        "completed_at": {"type": "string", "format": "date-time"},
+                    },
+                    "required": ["task_id", "result"],
                 },
             ),
             Tool(
@@ -196,6 +272,17 @@ def create_server(
                         },
                     },
                     "required": ["agent_id", "status"],
+                },
+                # MCP 2025: Structured output schema
+                outputSchema={
+                    "type": "object",
+                    "properties": {
+                        "agent_id": {"type": "string"},
+                        "acknowledged": {"type": "boolean"},
+                        "last_heartbeat": {"type": "string", "format": "date-time"},
+                        "timeout_in": {"type": "integer", "description": "Seconds until timeout"},
+                    },
+                    "required": ["agent_id", "acknowledged"],
                 },
             ),
         ]

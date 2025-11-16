@@ -78,7 +78,9 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for details.
 
 ## Agent Integration
 
-See [AGENTS.md](AGENTS.md) for agent implementation guide.
+**New to MAC MCP?** Start with our [10-Minute Tutorial](TUTORIAL.md) to build your first agent.
+
+See [AGENTS.md](AGENTS.md) for complete agent implementation reference.
 
 ## Development
 
@@ -95,18 +97,19 @@ ruff check src
 
 ## Documentation
 
-- [ARCHITECTURE.md](ARCHITECTURE.md) - System design and patterns
-- [PROTOCOL.md](PROTOCOL.md) - MCP protocol specification
-- [AGENTS.md](AGENTS.md) - Agent integration guide
-- [ROADMAP.md](ROADMAP.md) - Future enhancements
+- **[TUTORIAL.md](TUTORIAL.md)** - 🆕 Build your first agent in 10 minutes (Beginner)
+- [AGENTS.md](AGENTS.md) - Agent integration guide (Reference)
+- [PROTOCOL.md](PROTOCOL.md) - MCP protocol specification (Reference)
+- [ARCHITECTURE.md](ARCHITECTURE.md) - System design and patterns (Explanation)
+- [ROADMAP.md](ROADMAP.md) - Future enhancements (Planning)
 - [IMPROVEMENTS_2025.md](IMPROVEMENTS_2025.md) - 2025 best practices review & roadmap
 
 ## 2025 Standards Compliance
 
 This project follows 2025 best practices for multi-agent LLM systems. See [IMPROVEMENTS_2025.md](IMPROVEMENTS_2025.md) for:
 - Expert panel review findings
-- Implemented improvements (event validation ✅)
-- Recommended enhancements (MCP outputSchema, context engineering, etc.)
+- ✅ Implemented improvements: Event validation, MCP outputSchema, Tutorial
+- ⏸️ Recommended enhancements: Context engineering, dry-run mode, OpenTelemetry, etc.
 - Priority matrix and implementation roadmap
 
 ## License
