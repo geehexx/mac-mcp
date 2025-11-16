@@ -99,6 +99,15 @@ ruff check src
 - [PROTOCOL.md](PROTOCOL.md) - MCP protocol specification
 - [AGENTS.md](AGENTS.md) - Agent integration guide
 - [ROADMAP.md](ROADMAP.md) - Future enhancements
+- [IMPROVEMENTS_2025.md](IMPROVEMENTS_2025.md) - 2025 best practices review & roadmap
+
+## 2025 Standards Compliance
+
+This project follows 2025 best practices for multi-agent LLM systems. See [IMPROVEMENTS_2025.md](IMPROVEMENTS_2025.md) for:
+- Expert panel review findings
+- Implemented improvements (event validation ✅)
+- Recommended enhancements (MCP outputSchema, context engineering, etc.)
+- Priority matrix and implementation roadmap
 
 ## License
 

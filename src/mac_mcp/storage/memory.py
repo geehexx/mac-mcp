@@ -30,14 +30,54 @@ class InMemoryEventStore(EventStore):
             event: Event to append
 
         Raises:
-            ValueError: If event sequence is not monotonic
+            ValueError: If event sequence is not monotonic or event is invalid
         """
+        # Validate event sequence monotonicity
         if event.sequence <= self._latest_sequence:
             msg = f"Event sequence {event.sequence} is not greater than {self._latest_sequence}"
             raise ValueError(msg)
 
+        # Validate event schema (2025 best practice: validate before persistence)
+        try:
+            event.model_validate(event.model_dump())
+        except Exception as e:
+            msg = f"Event validation failed: {e}"
+            raise ValueError(msg) from e
+
+        # Validate event consistency (semantic validation)
+        self._validate_event_consistency(event)
+
         self._events.append(event)
         self._latest_sequence = event.sequence
+
+    def _validate_event_consistency(self, event: Event) -> None:
+        """Validate event semantic consistency.
+
+        Args:
+            event: Event to validate
+
+        Raises:
+            ValueError: If event is semantically invalid
+        """
+        # Validate required fields based on event type
+        if event.type.value.startswith("task_") and not event.task_id:
+            msg = f"Task event {event.type} requires task_id"
+            raise ValueError(msg)
+
+        if event.type.value.startswith("agent_") and not event.agent_id:
+            msg = f"Agent event {event.type} requires agent_id"
+            raise ValueError(msg)
+
+        if event.type.value.startswith("goal_") and not event.goal_id:
+            msg = f"Goal event {event.type} requires goal_id"
+            raise ValueError(msg)
+
+        # Validate payload structure for critical events
+        if event.type.value == "task_created":
+            required_fields = {"description", "required_capabilities"}
+            if not all(field in event.payload for field in required_fields):
+                msg = f"task_created event missing required payload fields: {required_fields}"
+                raise ValueError(msg)
 
     async def read(
         self,
