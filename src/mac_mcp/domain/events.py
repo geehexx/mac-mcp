@@ -65,20 +65,8 @@ class Event(BaseModel):
     payload: dict[str, Any] = Field(default_factory=dict)
 
     model_config = {
-        "frozen": True,  # Events are immutable
-        "extra": "forbid",  # Catch typos and invalid fields
-        "json_schema_extra": {
-            "examples": [
-                {
-                    "type": "task_created",
-                    "timestamp": "2025-11-15T20:00:00Z",
-                    "sequence": 1,
-                    "task_id": "t1",
-                    "goal_id": "g1",
-                    "payload": {"description": "Implement authentication"},
-                }
-            ]
-        },
+        "frozen": True,
+        "extra": "forbid",
     }
 
     @field_validator("timestamp", mode="before")

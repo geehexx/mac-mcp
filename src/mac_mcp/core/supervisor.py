@@ -87,7 +87,6 @@ class AgentSupervisor:
 
         self._agents[agent_id] = agent
 
-        # Record registration event
         await self.event_publisher.publish(
             AgentRegisteredEvent,
             agent_id=agent_id,
@@ -120,7 +119,6 @@ class AgentSupervisor:
         agent = self._agents[agent_id]
         agent.update_heartbeat(current_tasks)
 
-        # Record heartbeat event
         await self.event_publisher.publish(
             AgentHeartbeatEvent,
             agent_id=agent_id,
@@ -154,7 +152,6 @@ class AgentSupervisor:
         agent.status = AgentStatus.FAILED
         agent.current_tasks = []
 
-        # Record failure event
         await self.event_publisher.publish(
             AgentFailedEvent,
             agent_id=agent_id,
@@ -229,7 +226,6 @@ class AgentSupervisor:
 
                 elapsed = (now - agent.last_heartbeat).total_seconds()
                 if elapsed > self.heartbeat_timeout:
-                    # Agent has missed heartbeats
                     tasks = await self.mark_agent_failed(agent_id, "missed_heartbeats")
 
                     if on_failure:

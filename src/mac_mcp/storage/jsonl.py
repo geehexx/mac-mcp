@@ -54,11 +54,9 @@ class JSONLEventStore(EventStore):
         if self._initialized:
             return
 
-        # Ensure parent directories exist
         self.events_path.parent.mkdir(parents=True, exist_ok=True)
         self.snapshot_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Read latest sequence from existing events
         if await aio_os.path.exists(self.events_path):
             async for event in self.read():
                 self._latest_sequence = max(self._latest_sequence, event.sequence)
@@ -93,7 +91,6 @@ class JSONLEventStore(EventStore):
         # Validate event consistency (semantic validation)
         self._validate_event_consistency(event)
 
-        # Append event as JSON line (atomic write)
         async with aiofiles.open(self.events_path, "a", encoding="utf-8") as f:
             event_json = event.model_dump_json()
             await f.write(event_json + "\n")
@@ -168,10 +165,8 @@ class JSONLEventStore(EventStore):
                     count += 1
 
                 except json.JSONDecodeError:
-                    # Skip malformed lines
                     continue
                 except Exception:
-                    # Skip lines that don't parse as events
                     continue
 
     async def get_latest_sequence(self) -> int:

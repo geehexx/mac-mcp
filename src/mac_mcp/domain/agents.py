@@ -51,18 +51,7 @@ class Agent(BaseModel):
         }
     )
 
-    model_config = {
-        "json_schema_extra": {
-            "examples": [
-                {
-                    "id": "agent-123",
-                    "capabilities": ["python", "testing", "pytest"],
-                    "metadata": {"model": "claude-sonnet-4", "version": "1.0.0"},
-                    "status": "active",
-                }
-            ]
-        }
-    }
+    model_config = {}
 
     def matches_capabilities(self, required: list[str]) -> bool:
         """Check if agent has required capabilities.

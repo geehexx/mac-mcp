@@ -108,7 +108,6 @@ class Orchestrator:
 
         self._tasks[task_id] = task
 
-        # Record creation event
         await self.event_publisher.publish(
             TaskCreatedEvent,
             task_id=task_id,
@@ -150,11 +149,9 @@ class Orchestrator:
             msg = f"Agent {agent_id} lacks required capabilities"
             raise ValueError(msg)
 
-        # Assign task
         task.assign_to(agent_id)
         agent.current_tasks.append(task_id)
 
-        # Record assignment event
         await self.event_publisher.publish(
             TaskAssignedEvent,
             task_id=task_id,
@@ -193,7 +190,6 @@ class Orchestrator:
 
         task.update_progress(progress, message)
 
-        # Record progress event
         await self.event_publisher.publish(
             TaskProgressEvent,
             task_id=task_id,
@@ -235,11 +231,9 @@ class Orchestrator:
 
         task.complete(result)
 
-        # Update agent state
         agent.current_tasks.remove(task_id)
         agent.record_task_completion(success=True)
 
-        # Record completion event
         await self.event_publisher.publish(
             TaskCompletedEvent,
             task_id=task_id,
@@ -277,7 +271,6 @@ class Orchestrator:
 
         task.fail(error)
 
-        # Update agent state
         if task_id in agent.current_tasks:
             agent.current_tasks.remove(task_id)
         agent.record_task_completion(success=False)
@@ -289,14 +282,12 @@ class Orchestrator:
 
         if retryable and retry_count < max_retries:
             action = "retry"
-            # Reset task to PENDING for retry
             task.state = TaskState.PENDING
             task.assigned_agent = None
             task.metadata["retry_count"] = retry_count + 1
         else:
             action = "fail"
 
-        # Record failure event
         await self.event_publisher.publish(
             TaskFailedEvent,
             task_id=task_id,
@@ -362,14 +353,11 @@ class Orchestrator:
         if agent is None or not agent.can_accept_task():
             return None
 
-        # Find ready tasks matching capabilities
         ready_tasks = self.get_ready_tasks()
         for task in ready_tasks:
-            # Check capability match
             if not any(cap in capabilities for cap in task.required_capabilities):
                 continue
 
-            # Assign task
             await self.assign_task(task.id, agent_id)
             return task
 
@@ -448,7 +436,6 @@ class Orchestrator:
             msg = f"Goal {goal_id} already exists"
             raise ValueError(msg)
 
-        # Create goal
         goal = Goal(
             id=goal_id,
             description=description,
@@ -457,7 +444,6 @@ class Orchestrator:
         )
         self._goals[goal_id] = goal
 
-        # Record submission event
         await self.event_publisher.publish(
             GoalSubmittedEvent,
             goal_id=goal_id,
@@ -468,7 +454,6 @@ class Orchestrator:
             },
         )
 
-        # Trigger autonomous decomposition
         await self.decompose_goal(goal_id)
 
         return goal
@@ -491,7 +476,6 @@ class Orchestrator:
             msg = f"Goal {goal_id} not found"
             raise KeyError(msg)
 
-        # Mark as decomposing
         goal.start_decomposition()
 
         try:

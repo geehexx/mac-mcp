@@ -54,26 +54,7 @@ class Goal(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
     result: dict[str, Any] | None = None
 
-    model_config = {
-        "json_schema_extra": {
-            "examples": [
-                {
-                    "id": "g1",
-                    "description": "Build a REST API for user management",
-                    "state": "SUBMITTED",
-                    "context": {
-                        "language": "Python",
-                        "framework": "FastAPI",
-                        "database": "PostgreSQL",
-                    },
-                    "constraints": {
-                        "deadline": "2025-11-20T00:00:00Z",
-                        "max_agents": 5,
-                    },
-                }
-            ]
-        }
-    }
+    model_config = {}
 
     def can_transition_to(self, new_state: GoalState) -> bool:
         """Check if transition to new state is valid.

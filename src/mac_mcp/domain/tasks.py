@@ -61,20 +61,7 @@ class Task(BaseModel):
     error: dict[str, Any] | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
-    model_config = {
-        "json_schema_extra": {
-            "examples": [
-                {
-                    "id": "t1",
-                    "goal_id": "g1",
-                    "description": "Design database schema",
-                    "state": "PENDING",
-                    "required_capabilities": ["database", "postgresql"],
-                    "dependencies": [],
-                }
-            ]
-        }
-    }
+    model_config = {}
 
     def can_transition_to(self, new_state: TaskState) -> bool:
         """Check if transition to new state is valid.
