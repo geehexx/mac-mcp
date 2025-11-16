@@ -8,6 +8,7 @@ import asyncio
 from collections.abc import Callable
 from datetime import UTC, datetime
 
+from mac_mcp.core.event_publisher import EventPublisher
 from mac_mcp.domain.agents import Agent, AgentStatus
 from mac_mcp.domain.events import AgentFailedEvent, AgentHeartbeatEvent, AgentRegisteredEvent
 from mac_mcp.storage.base import EventStore
@@ -46,6 +47,7 @@ class AgentSupervisor:
             max_concurrent_tasks: Max concurrent tasks per agent
         """
         self.event_store = event_store
+        self.event_publisher = EventPublisher(event_store)
         self.heartbeat_interval = heartbeat_interval
         self.heartbeat_timeout = heartbeat_timeout
         self.max_concurrent_tasks = max_concurrent_tasks
@@ -86,16 +88,14 @@ class AgentSupervisor:
         self._agents[agent_id] = agent
 
         # Record registration event
-        sequence = await self.event_store.get_latest_sequence() + 1
-        event = AgentRegisteredEvent(
+        await self.event_publisher.publish(
+            AgentRegisteredEvent,
             agent_id=agent_id,
-            sequence=sequence,
             payload={
                 "capabilities": capabilities,
                 "metadata": metadata or {},
             },
         )
-        await self.event_store.append(event)
 
         return agent
 
@@ -121,17 +121,15 @@ class AgentSupervisor:
         agent.update_heartbeat(current_tasks)
 
         # Record heartbeat event
-        sequence = await self.event_store.get_latest_sequence() + 1
-        event = AgentHeartbeatEvent(
+        await self.event_publisher.publish(
+            AgentHeartbeatEvent,
             agent_id=agent_id,
-            sequence=sequence,
             payload={
                 "status": status,
                 "current_tasks": current_tasks or [],
                 "load": load,
             },
         )
-        await self.event_store.append(event)
 
     async def mark_agent_failed(
         self,
@@ -157,17 +155,15 @@ class AgentSupervisor:
         agent.current_tasks = []
 
         # Record failure event
-        sequence = await self.event_store.get_latest_sequence() + 1
-        event = AgentFailedEvent(
+        await self.event_publisher.publish(
+            AgentFailedEvent,
             agent_id=agent_id,
-            sequence=sequence,
             payload={
                 "reason": reason,
                 "last_heartbeat": agent.last_heartbeat.isoformat(),
                 "in_progress_tasks": in_progress_tasks,
             },
         )
-        await self.event_store.append(event)
 
         return in_progress_tasks
 

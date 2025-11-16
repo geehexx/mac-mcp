@@ -10,6 +10,7 @@ The orchestrator is the central coordination point implementing:
 from typing import Any
 
 from mac_mcp.core.decomposer import GoalDecomposer
+from mac_mcp.core.event_publisher import EventPublisher
 from mac_mcp.core.supervisor import AgentSupervisor
 from mac_mcp.domain.agents import Agent
 from mac_mcp.domain.events import (
@@ -60,6 +61,7 @@ class Orchestrator:
             configured with an appropriate LLM provider (Anthropic or Bedrock).
         """
         self.event_store = event_store
+        self.event_publisher = EventPublisher(event_store)
         self.supervisor = supervisor or AgentSupervisor(event_store)
         self.decomposer = decomposer
 
@@ -107,11 +109,10 @@ class Orchestrator:
         self._tasks[task_id] = task
 
         # Record creation event
-        sequence = await self.event_store.get_latest_sequence() + 1
-        event = TaskCreatedEvent(
+        await self.event_publisher.publish(
+            TaskCreatedEvent,
             task_id=task_id,
             goal_id=goal_id,
-            sequence=sequence,
             payload={
                 "description": description,
                 "required_capabilities": required_capabilities,
@@ -119,7 +120,6 @@ class Orchestrator:
                 "context": metadata or {},
             },
         )
-        await self.event_store.append(event)
 
         return task
 
@@ -155,16 +155,14 @@ class Orchestrator:
         agent.current_tasks.append(task_id)
 
         # Record assignment event
-        sequence = await self.event_store.get_latest_sequence() + 1
-        event = TaskAssignedEvent(
+        await self.event_publisher.publish(
+            TaskAssignedEvent,
             task_id=task_id,
             agent_id=agent_id,
-            sequence=sequence,
             payload={
                 "assignment_reason": "capability_match",
             },
         )
-        await self.event_store.append(event)
 
     async def update_task_progress(
         self,
@@ -196,18 +194,16 @@ class Orchestrator:
         task.update_progress(progress, message)
 
         # Record progress event
-        sequence = await self.event_store.get_latest_sequence() + 1
-        event = TaskProgressEvent(
+        await self.event_publisher.publish(
+            TaskProgressEvent,
             task_id=task_id,
             agent_id=agent_id,
-            sequence=sequence,
             payload={
                 "progress": progress,
                 "message": message,
                 "artifacts": artifacts or [],
             },
         )
-        await self.event_store.append(event)
 
     async def complete_task(
         self,
@@ -244,16 +240,14 @@ class Orchestrator:
         agent.record_task_completion(success=True)
 
         # Record completion event
-        sequence = await self.event_store.get_latest_sequence() + 1
-        event = TaskCompletedEvent(
+        await self.event_publisher.publish(
+            TaskCompletedEvent,
             task_id=task_id,
             agent_id=agent_id,
-            sequence=sequence,
             payload={
                 "result": result,
             },
         )
-        await self.event_store.append(event)
 
     async def fail_task(
         self,
@@ -303,17 +297,15 @@ class Orchestrator:
             action = "fail"
 
         # Record failure event
-        sequence = await self.event_store.get_latest_sequence() + 1
-        event = TaskFailedEvent(
+        await self.event_publisher.publish(
+            TaskFailedEvent,
             task_id=task_id,
             agent_id=agent_id,
-            sequence=sequence,
             payload={
                 "error": error,
                 "retry_count": retry_count + 1,
             },
         )
-        await self.event_store.append(event)
 
         return action
 
@@ -466,17 +458,15 @@ class Orchestrator:
         self._goals[goal_id] = goal
 
         # Record submission event
-        sequence = await self.event_store.get_latest_sequence() + 1
-        event = GoalSubmittedEvent(
+        await self.event_publisher.publish(
+            GoalSubmittedEvent,
             goal_id=goal_id,
-            sequence=sequence,
             payload={
                 "description": description,
                 "context": context or {},
                 "constraints": constraints or {},
             },
         )
-        await self.event_store.append(event)
 
         # Trigger autonomous decomposition
         await self.decompose_goal(goal_id)
@@ -522,11 +512,10 @@ class Orchestrator:
 
                 # Record task creation event FIRST (event sourcing principle)
                 # Events must be persisted before state mutation to ensure consistency
-                sequence = await self.event_store.get_latest_sequence() + 1
-                event = TaskCreatedEvent(
+                await self.event_publisher.publish(
+                    TaskCreatedEvent,
                     task_id=task.id,
                     goal_id=goal_id,
-                    sequence=sequence,
                     payload={
                         "description": task.description,
                         "required_capabilities": task.required_capabilities,
@@ -534,7 +523,6 @@ class Orchestrator:
                         "context": task.metadata,
                     },
                 )
-                await self.event_store.append(event)
 
                 # Store task AFTER event is persisted successfully
                 self._tasks[task.id] = task
@@ -545,16 +533,14 @@ class Orchestrator:
             goal.mark_ready(task_ids)
 
             # Record decomposition event
-            sequence = await self.event_store.get_latest_sequence() + 1
-            decomp_event = GoalDecomposedEvent(
+            await self.event_publisher.publish(
+                GoalDecomposedEvent,
                 goal_id=goal_id,
-                sequence=sequence,
                 payload={
                     "task_ids": task_ids,
                     "reasoning": task_dag.tasks[0].metadata.get("reasoning", "") if task_dag.tasks else "",
                 },
             )
-            await self.event_store.append(decomp_event)
 
             # Start execution
             goal.start_execution()
