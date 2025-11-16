@@ -35,7 +35,8 @@ def create_server(
         return [
             Tool(
                 name="submit_goal",
-                description="Submit a high-level goal for autonomous decomposition and execution",
+                description="Submit a high-level goal for autonomous decomposition and execution. "
+                           "Use dry_run=true to preview decomposition before committing (2025 MCP best practice).",
                 inputSchema={
                     "type": "object",
                     "properties": {
@@ -52,6 +53,11 @@ def create_server(
                             "type": "object",
                             "description": "Constraints (deadline, max_agents, etc.)",
                         },
+                        "dry_run": {
+                            "type": "boolean",
+                            "description": "If true, preview decomposition without persisting (prevents accidental submissions)",
+                            "default": False,
+                        },
                     },
                     "required": ["goal_id", "description"],
                 },
@@ -60,11 +66,25 @@ def create_server(
                     "type": "object",
                     "properties": {
                         "goal_id": {"type": "string"},
-                        "state": {"type": "string", "enum": ["SUBMITTED", "EXECUTING", "COMPLETED", "FAILED"]},
+                        "state": {"type": "string", "enum": ["SUBMITTED", "EXECUTING", "COMPLETED", "FAILED", "PREVIEW"]},
                         "task_count": {"type": "integer"},
                         "task_ids": {"type": "array", "items": {"type": "string"}},
+                        "is_preview": {"type": "boolean", "description": "True if this is a dry-run preview"},
+                        "tasks": {
+                            "type": "array",
+                            "description": "Task details (only in preview mode)",
+                            "items": {
+                                "type": "object",
+                                "properties": {
+                                    "id": {"type": "string"},
+                                    "description": {"type": "string"},
+                                    "required_capabilities": {"type": "array", "items": {"type": "string"}},
+                                    "dependencies": {"type": "array", "items": {"type": "string"}},
+                                },
+                            },
+                        },
                     },
-                    "required": ["goal_id", "state", "task_count"],
+                    "required": ["goal_id", "task_count"],
                 },
             ),
             Tool(
@@ -291,16 +311,53 @@ def create_server(
     async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
         """Handle tool calls."""
         if name == "submit_goal":
-            goal = await orchestrator.submit_goal(
+            dry_run = arguments.get("dry_run", False)
+            result = await orchestrator.submit_goal(
                 goal_id=arguments["goal_id"],
                 description=arguments["description"],
                 context=arguments.get("context"),
                 constraints=arguments.get("constraints"),
+                dry_run=dry_run,
             )
+
+            # Handle dry-run preview
+            if dry_run:
+                # Result is TaskDAG
+                import json
+                task_dag = result
+                preview_data = {
+                    "goal_id": arguments["goal_id"],
+                    "state": "PREVIEW",
+                    "is_preview": True,
+                    "task_count": len(task_dag.tasks),
+                    "task_ids": [t.id for t in task_dag.tasks],
+                    "tasks": [
+                        {
+                            "id": t.id,
+                            "description": t.description,
+                            "required_capabilities": t.required_capabilities,
+                            "dependencies": t.dependencies,
+                        }
+                        for t in task_dag.tasks
+                    ],
+                }
+                return [
+                    TextContent(
+                        type="text",
+                        text=f"🔍 DRY-RUN PREVIEW for goal {arguments['goal_id']}:\n\n"
+                             f"Would create {len(task_dag.tasks)} tasks:\n"
+                             + "\n".join([f"  - {t.id}: {t.description}" for t in task_dag.tasks])
+                             + f"\n\nTo execute, call submit_goal again with dry_run=false\n\n"
+                             f"Full preview:\n{json.dumps(preview_data, indent=2)}",
+                    )
+                ]
+
+            # Handle actual submission
+            goal = result
             return [
                 TextContent(
                     type="text",
-                    text=f"Goal {goal.id} submitted and decomposed into {len(goal.task_ids)} tasks",
+                    text=f"✅ Goal {goal.id} submitted and decomposed into {len(goal.task_ids)} tasks",
                 )
             ]
 

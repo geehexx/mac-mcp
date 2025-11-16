@@ -383,14 +383,17 @@ class Orchestrator:
 
         return None
 
-    async def submit_goal(
+    async def preview_goal(
         self,
         goal_id: str,
         description: str,
         context: dict[str, Any] | None = None,
         constraints: dict[str, Any] | None = None,
-    ) -> Goal:
-        """Submit a new goal for autonomous decomposition.
+    ) -> TaskDAG:
+        """Preview goal decomposition without persisting (dry-run mode).
+
+        This is a 2025 MCP best practice: preview state-changing operations
+        before execution to prevent accidental submissions and wasted LLM costs.
 
         Args:
             goal_id: Unique goal identifier
@@ -399,11 +402,52 @@ class Orchestrator:
             constraints: Constraints (deadline, max_agents, etc.)
 
         Returns:
-            Created goal
+            Task DAG showing planned decomposition (not persisted)
+
+        Raises:
+            ValueError: If decomposer not configured or decomposition fails
+        """
+        if self.decomposer is None:
+            msg = "Goal decomposer not configured. Orchestrator must be initialized with a GoalDecomposer."
+            raise ValueError(msg)
+
+        # Call decomposer without persisting
+        task_dag = await self.decomposer.decompose(
+            goal_id=goal_id,
+            description=description,
+            context=context or {},
+            constraints=constraints or {},
+        )
+
+        return task_dag
+
+    async def submit_goal(
+        self,
+        goal_id: str,
+        description: str,
+        context: dict[str, Any] | None = None,
+        constraints: dict[str, Any] | None = None,
+        dry_run: bool = False,
+    ) -> Goal | TaskDAG:
+        """Submit a new goal for autonomous decomposition.
+
+        Args:
+            goal_id: Unique goal identifier
+            description: Goal description
+            context: Additional context (language, framework, domain, etc.)
+            constraints: Constraints (deadline, max_agents, etc.)
+            dry_run: If True, preview decomposition without persisting (2025 MCP best practice)
+
+        Returns:
+            Created goal if dry_run=False, TaskDAG preview if dry_run=True
 
         Raises:
             ValueError: If goal already exists or decomposer not configured
         """
+        # 2025 MCP Best Practice: Dry-run mode for state-changing operations
+        if dry_run:
+            return await self.preview_goal(goal_id, description, context, constraints)
+
         if self.decomposer is None:
             msg = "Goal decomposer not configured. Orchestrator must be initialized with a GoalDecomposer."
             raise ValueError(msg)
