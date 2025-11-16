@@ -5,6 +5,7 @@ import ast
 import sys
 from pathlib import Path
 
+
 BLOCKING_CALLS = {
     "open",  # Use aiofiles.open
     "read",  # Use await f.read()

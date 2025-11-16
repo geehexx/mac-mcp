@@ -1,0 +1,92 @@
+# MAC MCP Server Configuration
+# Copy this file to config.yaml and customize for your environment
+
+# LLM Provider Configuration
+llm:
+  # Provider: "anthropic" or "bedrock"
+  provider: "anthropic"
+
+  # Model identifier
+  # For Anthropic: claude-sonnet-4-5-20250929, claude-opus-4-20250514, etc.
+  # For Bedrock: anthropic.claude-3-5-sonnet-20241022-v2:0, etc.
+  model: "claude-sonnet-4-5-20250929"
+
+  # Anthropic API configuration (only for provider: anthropic)
+  api_key: null  # Or set MAC_LLM_API_KEY environment variable
+
+  # AWS Bedrock configuration (only for provider: bedrock)
+  aws_region: "us-east-1"
+  aws_access_key_id: null  # Or set MAC_LLM_AWS_ACCESS_KEY_ID
+  aws_secret_access_key: null  # Or set MAC_LLM_AWS_SECRET_ACCESS_KEY
+  aws_profile: null  # Or set MAC_LLM_AWS_PROFILE (uses default AWS credential chain if null)
+
+  # LLM parameters
+  max_tokens: 4096
+  temperature: 0.7
+
+# MCP Server Configuration
+server:
+  # Server network settings
+  host: "127.0.0.1"
+  port: 3000
+
+  # Transport mode: "stdio" for MCP clients, "http" for HTTP API
+  transport: "stdio"
+
+  # Event store path (JSONL file for event sourcing)
+  event_store_path: "data/events.jsonl"
+
+  # Agent management
+  max_agents: 100
+  heartbeat_interval: 30  # seconds
+  heartbeat_timeout: 90   # seconds
+
+# Authentication Configuration (NEW in v0.1.0)
+# WARNING: API key auth is for development/alpha only
+# Production deployments require OAuth 2.1 (planned for v0.2.0)
+auth:
+  # Enable/disable authentication
+  # Set to false for testing/development only
+  enabled: true
+
+  # API keys mapping (key → agent_id)
+  # Generate keys with:
+  #   from mac_mcp.auth import APIKeyAuth, AuthConfig
+  #   auth = APIKeyAuth(AuthConfig())
+  #   key = auth.generate_key('agent_id')
+  api_keys:
+    # Example format (replace with real generated keys):
+    # "sk_test_REPLACE_ME_WITH_REAL_KEY_1": "agent_1"
+    # "sk_test_REPLACE_ME_WITH_REAL_KEY_2": "agent_2"
+
+  # Key length in bytes for generated keys (default: 32)
+  key_length: 32
+
+# User Interface Configuration
+ui:
+  # Mode: "headless" (no UI), "tui" (terminal UI), "web" (future)
+  mode: "tui"
+
+  # UI refresh interval in seconds
+  refresh_interval: 1.0
+
+  # Color theme: "dark", "light", "auto"
+  theme: "dark"
+
+  # Display options
+  show_events: true
+  show_metrics: true
+
+# Logging Configuration
+logging:
+  # Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  level: "INFO"
+
+  # Log format
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+  # Log file path (null for no file logging)
+  file: "logs/mac-mcp.log"
+
+  # Enable console logging
+  console: true
