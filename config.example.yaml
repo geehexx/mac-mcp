@@ -41,6 +41,27 @@ server:
   heartbeat_interval: 30  # seconds
   heartbeat_timeout: 90   # seconds
 
+# Authentication Configuration (NEW in v0.1.0)
+# WARNING: API key auth is for development/alpha only
+# Production deployments require OAuth 2.1 (planned for v0.2.0)
+auth:
+  # Enable/disable authentication
+  # Set to false for testing/development only
+  enabled: true
+
+  # API keys mapping (key → agent_id)
+  # Generate keys with:
+  #   from mac_mcp.auth import APIKeyAuth, AuthConfig
+  #   auth = APIKeyAuth(AuthConfig())
+  #   key = auth.generate_key('agent_id')
+  api_keys:
+    # Example format (replace with real generated keys):
+    # "sk_test_REPLACE_ME_WITH_REAL_KEY_1": "agent_1"
+    # "sk_test_REPLACE_ME_WITH_REAL_KEY_2": "agent_2"
+
+  # Key length in bytes for generated keys (default: 32)
+  key_length: 32
+
 # User Interface Configuration
 ui:
   # Mode: "headless" (no UI), "tui" (terminal UI), "web" (future)

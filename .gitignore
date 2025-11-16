@@ -137,6 +137,7 @@ celerybeat.pid
 # Environments
 .env
 .envrc
+.direnv/
 .venv
 env/
 venv/
@@ -212,6 +213,19 @@ events.jsonl.compacted
 snapshot.json
 snapshot.json.tmp
 *.log
+
+# Configuration with secrets
+config.yaml
+
+# Agent configuration (Q CLI specific)
+.amazonq/cli-todo-lists/
+.amazonq/.subagents/
+.amazonq/cli-agents/cli-agent.json
+
+# Prohibited files (never commit)
+*SUMMARY*.md
+*HANDOFF*.md
+*TODO*.md
 
 # Development artifacts
 .DS_Store

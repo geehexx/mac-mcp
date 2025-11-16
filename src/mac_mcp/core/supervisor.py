@@ -7,6 +7,7 @@ monitoring agent health via heartbeats and recovering from failures.
 import asyncio
 from collections.abc import Callable
 from datetime import UTC, datetime
+from typing import Any
 
 from mac_mcp.core.event_publisher import EventPublisher
 from mac_mcp.domain.agents import Agent, AgentStatus

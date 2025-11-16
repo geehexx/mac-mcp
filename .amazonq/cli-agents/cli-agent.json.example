@@ -1,0 +1,105 @@
+{
+  "$schema": "https://raw.githubusercontent.com/aws/amazon-q-developer-cli/refs/heads/main/schemas/agent-v1.json",
+  "name": "mac_mcp_developer_cli",
+  "description": "Amazon Q Developer CLI for MAC MCP Server",
+  "model": "claude-sonnet-4.5",
+  "prompt": "file://cli-agent-prompt.md",
+  "mcpServers": {
+    "mac-mcp": {
+      "command": "uv",
+      "disabled": false,
+      "timeout": 300000,
+      "args": ["run", "mac-mcp", "--config", "config.yaml"],
+      "cwd": "/home/gxx/projects/mac-mcp"
+    },
+    "fetch": {
+      "command": "uvx",
+      "disabled": false,
+      "timeout": 60000,
+      "args": ["mcp-server-fetch"]
+    },
+    "BraveSearch": {
+      "command": "npx",
+      "disabled": false,
+      "timeout": 60000,
+      "args": ["@modelcontextprotocol/server-brave-search"],
+      "env": {"BRAVE_API_KEY": "${BRAVE_API_KEY}"}
+    },
+    "HITLMCP": {
+      "type": "http",
+      "url": "http://127.0.0.1:5555/mcp",
+      "timeout": 600000
+    },
+    "Time": {
+      "command": "uvx",
+      "disabled": false,
+      "timeout": 60000,
+      "args": ["mcp-server-time"]
+    }
+  },
+  "tools": ["*"],
+  "allowedTools": [
+    "*",
+    "@mac-mcp/*",
+    "@fetch/fetch",
+    "@BraveSearch/*",
+    "@HITLMCP/*",
+    "@Time/*"
+  ],
+  "toolsSettings": {},
+  "resources": ["file://.amazonq/rules/core/**/*.md"],
+  "hooks": {
+    "agentSpawn": [
+      {
+        "command": "bash .amazonq/hooks/agent-spawn.sh",
+        "timeout_ms": 10000
+      }
+    ],
+    "userPromptSubmit": [
+      {
+        "command": "bash .amazonq/hooks/user-prompt.sh",
+        "timeout_ms": 5000
+      }
+    ],
+    "preToolUse": [
+      {
+        "matcher": "brave_web_search",
+        "command": "bash .amazonq/hooks/rate-limit-brave.sh",
+        "timeout_ms": 5000
+      },
+      {
+        "matcher": "fs_write",
+        "command": "bash .amazonq/hooks/track-state.sh",
+        "timeout_ms": 1000
+      },
+      {
+        "matcher": "execute_bash",
+        "command": "bash .amazonq/hooks/track-state.sh",
+        "timeout_ms": 1000
+      }
+    ],
+    "postToolUse": [
+      {
+        "command": "bash .amazonq/hooks/post-tool-use.sh",
+        "timeout_ms": 1000
+      },
+      {
+        "matcher": "knowledge",
+        "command": "bash .amazonq/hooks/post-knowledge.sh",
+        "timeout_ms": 200000
+      },
+      {
+        "matcher": "fs_write",
+        "command": "bash .amazonq/hooks/check-modifications.sh",
+        "timeout_ms": 5000
+      },
+      {
+        "matcher": "execute_bash",
+        "command": "bash .amazonq/hooks/post-execute-bash.sh",
+        "timeout_ms": 5000
+      }
+    ],
+    "stop": [{"command": "echo \"📊 Session ended: $(date --iso-8601=seconds)\""}]
+  },
+  "useLegacyMcpJson": true
+}

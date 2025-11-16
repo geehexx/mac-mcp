@@ -10,6 +10,7 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import Resource, TextContent, Tool
 
+from mac_mcp.auth import APIKeyAuth, AuthConfig
 from mac_mcp.core.orchestrator import Orchestrator
 from mac_mcp.mcp.handlers import get_handler
 from mac_mcp.storage.base import EventStore
@@ -18,17 +19,23 @@ from mac_mcp.storage.base import EventStore
 def create_server(
     orchestrator: Orchestrator,
     event_store: EventStore,
+    auth: APIKeyAuth | None = None,
 ) -> Server:
     """Create MCP server with MAC protocol tools and resources.
 
     Args:
         orchestrator: The main orchestrator instance
         event_store: Event store for reading events
+        auth: Authentication handler (optional, disables auth if None)
 
     Returns:
         Configured MCP server
     """
     server = Server("mac-mcp")
+    
+    # Create default auth if not provided (disabled for testing)
+    if auth is None:
+        auth = APIKeyAuth(AuthConfig(enabled=False))
 
     @server.list_tools()
     async def list_tools() -> list[Tool]:
@@ -310,21 +317,48 @@ def create_server(
 
     @server.call_tool()
     async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
-        """Handle tool calls using handler registry.
+        """Handle tool calls with authentication middleware.
 
-        This implementation uses the Handler/Strategy pattern to eliminate
-        the massive if-elif chain. Each tool has a dedicated handler function
-        in the handlers module.
+        All tool calls now require authentication (unless disabled in config).
+        Uses the Handler/Strategy pattern to eliminate massive if-elif chains.
 
-        2025 Best Practice: Use handler registries for extensibility.
+        2025 Best Practice: Auth middleware + handler registries for extensibility.
         """
+        # Authentication middleware
+        if auth._enabled:
+            # Extract API key from arguments
+            api_key = arguments.get("api_key")
+            
+            if not api_key:
+                return [TextContent(
+                    type="text",
+                    text="❌ Authentication required: Missing 'api_key' parameter.\n"
+                         "Generate keys with:\n"
+                         "  from mac_mcp.auth import APIKeyAuth, AuthConfig\n"
+                         "  auth = APIKeyAuth(AuthConfig())\n"
+                         "  key = auth.generate_key('your_agent_id')\n"
+                         "See README.md for details.",
+                )]
+            
+            # Validate API key
+            agent_id = await auth.validate(api_key)
+            if agent_id is None:
+                return [TextContent(
+                    type="text",
+                    text="❌ Authentication failed: Invalid API key.\n"
+                         "Check your key or generate a new one.",
+                )]
+            
+            # Store authenticated agent_id for authorization checks in handlers
+            arguments["_authenticated_agent_id"] = agent_id
+        
         # Look up handler for this tool
         handler = get_handler(name)
 
         if handler is None:
             return [TextContent(type="text", text=f"❌ Unknown tool: {name}")]
 
-        # Delegate to handler
+        # Delegate to handler (which will perform authorization checks)
         return await handler(orchestrator, arguments)
 
     # Resources

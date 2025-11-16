@@ -9,12 +9,14 @@ repos:
       - id: trailing-whitespace
       - id: end-of-file-fixer
       - id: check-yaml
+        exclude: ^config\.yaml$
       - id: check-added-large-files
         args: [--maxkb=1000]
       - id: check-json
       - id: check-toml
       - id: check-merge-conflict
       - id: detect-private-key
+        exclude: ^tests/
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.7.4
@@ -47,4 +49,55 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
-        args: [--tb=short, -q]
+        args: [--tb=short, -q, -m, "not slow"]
+
+      - id: check-async-patterns
+        name: check-async-patterns
+        entry: python scripts/hooks/check_async_patterns.py
+        language: system
+        pass_filenames: false
+        files: ^src/
+
+      - id: check-event-immutability
+        name: check-event-immutability
+        entry: python scripts/hooks/check_event_immutability.py
+        language: system
+        pass_filenames: false
+        files: ^src/mac_mcp/domain/
+
+      - id: check-prohibited-files
+        name: check-prohibited-files
+        entry: bash -c 'if ls *SUMMARY*.md *HANDOFF*.md *TODO*.md 2>/dev/null; then echo "❌ Prohibited files found"; exit 1; fi'
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: check-secrets-in-config
+        name: check-secrets-in-config
+        entry: bash -c 'if git diff --cached --name-only | grep -q "^config\.yaml$"; then echo "❌ config.yaml contains secrets - use config.example.yaml"; exit 1; fi'
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: check-async-patterns
+        name: check-async-patterns
+        entry: python scripts/hooks/check_async_patterns.py
+        language: system
+        pass_filenames: false
+        always_run: false
+        files: ^src/
+
+      - id: check-event-immutability
+        name: check-event-immutability
+        entry: python scripts/hooks/check_event_immutability.py
+        language: system
+        pass_filenames: false
+        always_run: false
+        files: ^src/mac_mcp/domain/
+
+      - id: check-prohibited-files
+        name: check-prohibited-files
+        entry: bash -c 'if ls *SUMMARY*.md *HANDOFF*.md *TODO*.md 2>/dev/null; then echo "❌ Prohibited files found"; exit 1; fi'
+        language: system
+        pass_filenames: false
+        always_run: true

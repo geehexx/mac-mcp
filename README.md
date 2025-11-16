@@ -183,6 +183,73 @@ asyncio.run(main())
 
 ---
 
+## ⚠️ Security Notice (v0.1.0 - Alpha)
+
+**THIS IS ALPHA SOFTWARE - NOT PRODUCTION READY**
+
+### Current Limitations
+
+Version 0.1.0 uses **API key authentication** which has significant limitations:
+
+- ❌ **No encryption** - API keys are bearer tokens (anyone with key has full access)
+- ❌ **No expiration** - Keys don't expire or rotate automatically
+- ❌ **No rate limiting** - Agents can spam requests (DoS vector)
+- ❌ **No audit logging** - Limited tracking of security events
+- ❌ **Config file storage** - Keys in config.yaml (not secrets manager)
+
+### DO NOT USE IN PRODUCTION
+
+This release is intended for:
+- ✅ Development and testing
+- ✅ Proof-of-concept projects
+- ✅ Learning and experimentation
+
+### For Production Use
+
+Wait for v0.2.0 (Q1 2026) which will include:
+- ✅ OAuth 2.1 with JWT authentication
+- ✅ Resource Indicators (RFC 8707) for token scoping
+- ✅ Per-agent rate limiting (1000 req/hr)
+- ✅ Comprehensive audit logging
+- ✅ Secrets manager integration
+
+See [ROADMAP.md](ROADMAP.md) for detailed security timeline.
+
+### Generating API Keys
+
+```python
+from mac_mcp.auth import APIKeyAuth, AuthConfig
+
+# Initialize auth
+auth = APIKeyAuth(AuthConfig())
+
+# Generate key for an agent
+api_key = auth.generate_key("agent_id_here")
+print(f"API Key: {api_key}")
+print("⚠️ SAVE THIS KEY - You won't see it again!")
+
+# Add to config.yaml:
+# auth:
+#   enabled: true
+#   api_keys:
+#     "{api_key}": "agent_id_here"
+```
+
+### Using API Keys
+
+All MCP tool calls require an `api_key` parameter:
+
+```python
+# Example: Claim task with authentication
+result = await client.call_tool("claim_task", {
+    "api_key": "your_api_key_here",
+    "agent_id": "agent_1",
+    "capabilities": ["python", "testing"]
+})
+```
+
+---
+
 ## 📖 Documentation
 
 | Category | Description | Links |

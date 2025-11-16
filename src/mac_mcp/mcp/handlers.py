@@ -14,10 +14,72 @@ from typing import Any, Callable
 from mcp.types import TextContent
 
 from mac_mcp.core.orchestrator import Orchestrator
+from mac_mcp.domain.tasks import Task
 from mac_mcp.storage.base import EventStore
 
 # Type alias for handler functions
 ToolHandler = Callable[[Orchestrator, dict[str, Any]], list[TextContent]]
+
+
+# Authorization helpers
+
+
+def check_agent_authorization(
+    authenticated_agent_id: str,
+    requested_agent_id: str,
+    operation: str,
+) -> TextContent | None:
+    """Check if agent is authorized to perform operation.
+
+    Args:
+        authenticated_agent_id: Agent ID from authentication
+        requested_agent_id: Agent ID in request
+        operation: Description of operation for error message
+
+    Returns:
+        Error TextContent if unauthorized, None if authorized
+    """
+    if authenticated_agent_id != requested_agent_id:
+        return TextContent(
+            type="text",
+            text=f"❌ Authorization error: Cannot {operation} for another agent. "
+                 f"Authenticated as '{authenticated_agent_id}', "
+                 f"but tried to act as '{requested_agent_id}'.",
+        )
+    return None
+
+
+def check_task_ownership(
+    task: Task | None,
+    agent_id: str,
+    task_id: str,
+    operation: str,
+) -> TextContent | None:
+    """Check if agent owns the task.
+
+    Args:
+        task: Task to check
+        agent_id: Agent ID to validate
+        task_id: Task ID for error messages
+        operation: Description of operation for error message
+
+    Returns:
+        Error TextContent if unauthorized/not found, None if authorized
+    """
+    if task is None:
+        return TextContent(
+            type="text",
+            text=f"❌ Task '{task_id}' not found.",
+        )
+
+    if task.assigned_agent != agent_id:
+        return TextContent(
+            type="text",
+            text=f"❌ Authorization error: Cannot {operation} task '{task_id}'. "
+                 f"Task is assigned to '{task.assigned_agent}', not you.",
+        )
+
+    return None
 
 
 async def handle_submit_goal(
@@ -81,9 +143,21 @@ async def handle_register_agent(
     orchestrator: Orchestrator,
     arguments: dict[str, Any],
 ) -> list[TextContent]:
-    """Handle register_agent tool call."""
+    """Handle register_agent tool call with authorization."""
+    agent_id = arguments["agent_id"]
+    
+    # Authorization check: agent_id must match authenticated agent
+    if "_authenticated_agent_id" in arguments:
+        auth_error = check_agent_authorization(
+            arguments["_authenticated_agent_id"],
+            agent_id,
+            "register",
+        )
+        if auth_error:
+            return [auth_error]
+    
     agent = await orchestrator.supervisor.register_agent(
-        agent_id=arguments["agent_id"],
+        agent_id=agent_id,
         capabilities=arguments["capabilities"],
         metadata=arguments.get("metadata"),
     )
@@ -99,9 +173,19 @@ async def handle_claim_task(
     orchestrator: Orchestrator,
     arguments: dict[str, Any],
 ) -> list[TextContent]:
-    """Handle claim_task tool call."""
+    """Handle claim_task tool call with authorization."""
     agent_id = arguments["agent_id"]
     capabilities = arguments["capabilities"]
+    
+    # Authorization check: agent_id must match authenticated agent
+    if "_authenticated_agent_id" in arguments:
+        auth_error = check_agent_authorization(
+            arguments["_authenticated_agent_id"],
+            agent_id,
+            "claim tasks",
+        )
+        if auth_error:
+            return [auth_error]
 
     # Use orchestrator's claim_task method (pull-based assignment)
     task = await orchestrator.claim_task(
@@ -130,12 +214,28 @@ async def handle_report_progress(
     orchestrator: Orchestrator,
     arguments: dict[str, Any],
 ) -> list[TextContent]:
-    """Handle report_progress tool call."""
+    """Handle report_progress tool call with authorization."""
     task_id = arguments["task_id"]
     agent_id = arguments["agent_id"]
     progress = arguments["progress"]
     message = arguments.get("message")
     artifacts = arguments.get("artifacts")
+    
+    # Authorization check 1: agent_id must match authenticated agent
+    if "_authenticated_agent_id" in arguments:
+        auth_error = check_agent_authorization(
+            arguments["_authenticated_agent_id"],
+            agent_id,
+            "report progress",
+        )
+        if auth_error:
+            return [auth_error]
+    
+    # Authorization check 2: agent must own the task
+    task = orchestrator.get_task(task_id)
+    ownership_error = check_task_ownership(task, agent_id, task_id, "report progress on")
+    if ownership_error:
+        return [ownership_error]
 
     await orchestrator.update_task_progress(
         task_id=task_id,
@@ -158,10 +258,26 @@ async def handle_complete_task(
     orchestrator: Orchestrator,
     arguments: dict[str, Any],
 ) -> list[TextContent]:
-    """Handle complete_task tool call."""
+    """Handle complete_task tool call with authorization."""
     task_id = arguments["task_id"]
     agent_id = arguments["agent_id"]
     result = arguments["result"]
+    
+    # Authorization check 1: agent_id must match authenticated agent
+    if "_authenticated_agent_id" in arguments:
+        auth_error = check_agent_authorization(
+            arguments["_authenticated_agent_id"],
+            agent_id,
+            "complete task",
+        )
+        if auth_error:
+            return [auth_error]
+    
+    # Authorization check 2: agent must own the task
+    task = orchestrator.get_task(task_id)
+    ownership_error = check_task_ownership(task, agent_id, task_id, "complete")
+    if ownership_error:
+        return [ownership_error]
 
     await orchestrator.complete_task(
         task_id=task_id,
@@ -200,10 +316,26 @@ async def handle_fail_task(
     orchestrator: Orchestrator,
     arguments: dict[str, Any],
 ) -> list[TextContent]:
-    """Handle fail_task tool call."""
+    """Handle fail_task tool call with authorization."""
     task_id = arguments["task_id"]
     agent_id = arguments["agent_id"]
     error = arguments["error"]
+    
+    # Authorization check 1: agent_id must match authenticated agent
+    if "_authenticated_agent_id" in arguments:
+        auth_error = check_agent_authorization(
+            arguments["_authenticated_agent_id"],
+            agent_id,
+            "fail task",
+        )
+        if auth_error:
+            return [auth_error]
+    
+    # Authorization check 2: agent must own the task
+    task = orchestrator.get_task(task_id)
+    ownership_error = check_task_ownership(task, agent_id, task_id, "fail")
+    if ownership_error:
+        return [ownership_error]
 
     action = await orchestrator.fail_task(
         task_id=task_id,
@@ -235,8 +367,38 @@ async def handle_request_dependency(
     orchestrator: Orchestrator,
     arguments: dict[str, Any],
 ) -> list[TextContent]:
-    """Handle request_dependency tool call."""
+    """Handle request_dependency tool call with authorization."""
+    agent_id = arguments["agent_id"]
     dependency_task_id = arguments["task_id"]
+    
+    # Authorization check 1: agent_id must match authenticated agent
+    if "_authenticated_agent_id" in arguments:
+        auth_error = check_agent_authorization(
+            arguments["_authenticated_agent_id"],
+            agent_id,
+            "request dependency",
+        )
+        if auth_error:
+            return [auth_error]
+    
+    # Authorization check 2: Verify agent has a task that depends on this
+    agent_tasks = [
+        t for t in orchestrator._tasks.values()
+        if t.assigned_agent == agent_id
+    ]
+    
+    has_dependency = any(
+        dependency_task_id in task.dependencies
+        for task in agent_tasks
+    )
+    
+    if not has_dependency:
+        return [
+            TextContent(
+                type="text",
+                text=f"❌ Authorization error: You don't have any tasks that depend on '{dependency_task_id}'.",
+            )
+        ]
 
     # Use orchestrator's get_dependency_result method
     result = orchestrator.get_dependency_result(dependency_task_id)
@@ -263,11 +425,21 @@ async def handle_heartbeat(
     orchestrator: Orchestrator,
     arguments: dict[str, Any],
 ) -> list[TextContent]:
-    """Handle heartbeat tool call."""
+    """Handle heartbeat tool call with authorization."""
     agent_id = arguments["agent_id"]
     status = arguments.get("status", "healthy")
     current_tasks = arguments.get("current_tasks")
     load = arguments.get("load")
+    
+    # Authorization check: agent_id must match authenticated agent
+    if "_authenticated_agent_id" in arguments:
+        auth_error = check_agent_authorization(
+            arguments["_authenticated_agent_id"],
+            agent_id,
+            "send heartbeat",
+        )
+        if auth_error:
+            return [auth_error]
 
     try:
         await orchestrator.supervisor.update_heartbeat(

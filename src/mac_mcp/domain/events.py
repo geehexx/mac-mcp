@@ -48,6 +48,7 @@ class Event(BaseModel):
 
     Attributes:
         type: Event type identifier
+        schema_version: Event schema version for migrations (default: 1)
         timestamp: When the event occurred (UTC)
         sequence: Monotonically increasing sequence number
         task_id: Related task (if applicable)
@@ -57,6 +58,7 @@ class Event(BaseModel):
     """
 
     type: EventType
+    schema_version: int = 1  # For future event migrations
     timestamp: Annotated[datetime, Field(default_factory=lambda: datetime.now(UTC))]
     sequence: Annotated[int, Field(ge=0)]
     task_id: str | None = None

@@ -14,6 +14,8 @@ from typing import Annotated, Any
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from mac_mcp.auth import AuthConfig
+
 
 class LLMProvider(str, Enum):
     """Supported LLM providers for goal decomposition."""
@@ -268,12 +270,14 @@ class MACConfig(BaseSettings):
     Attributes:
         llm: LLM provider configuration
         server: MCP server configuration
+        auth: Authentication configuration
         ui: User interface configuration
         logging: Logging configuration
     """
 
     llm: LLMConfig = Field(default_factory=LLMConfig)
     server: ServerConfig = Field(default_factory=ServerConfig)
+    auth: AuthConfig = Field(default_factory=AuthConfig)
     ui: UIConfig = Field(default_factory=UIConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
 
