@@ -99,12 +99,6 @@
 └─────────────┴──────────┴──────────┴──────────┘
 ```
 
-**Key Patterns**:
-- **Event Sourcing**: All state changes captured as immutable events
-- **Actor Model**: No direct agent-to-agent communication
-- **Pull-based**: Agents claim work when ready (backpressure control)
-- **CQRS**: Separate read (query) and write (command) paths
-
 ---
 
 ## 🚀 Quick Start
@@ -197,30 +191,6 @@ asyncio.run(main())
 
 ---
 
-## 🎯 Use Cases
-
-**1. Software Development**
-- Decompose "build feature X" into design → implement → test → document tasks
-- Specialized agents for Python, testing, documentation, code review
-- Autonomous execution with human approval at milestones
-
-**2. Research & Analysis**
-- Break down research questions into data gathering → analysis → synthesis
-- Parallel execution of independent research threads
-- Consolidated reporting from multiple sources
-
-**3. Content Creation**
-- Outline → draft → edit → publish workflows
-- Specialized agents for writing, editing, fact-checking, SEO
-- Dependency management ensures proper ordering
-
-**4. Data Pipelines**
-- ETL workflows decomposed into extract → transform → load stages
-- Retry logic for transient failures
-- Event log provides complete data lineage
-
----
-
 ## 🔧 MCP Tools
 
 MAC MCP Server implements 8 tools via the Model Context Protocol:
@@ -280,31 +250,13 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
 **Current Version**: v0.1.0 (Alpha)
 
-**What Works**:
-- ✅ Goal decomposition with LLM
-- ✅ Task DAG with dependencies
-- ✅ Agent registration and heartbeat
-- ✅ Pull-based task assignment
-- ✅ Event sourcing (JSONL)
-- ✅ TUI dashboard
-- ✅ MCP June 2025 compliance
-
 **Known Limitations**:
-- ⚠️ Single orchestrator instance (distributed planned for v2.0)
-- ⚠️ JSONL storage only (pluggable backends planned for v1.0)
-- ⚠️ No authentication (JWT planned for v0.3.0)
-- ⚠️ No web dashboard (planned for v0.4.0)
+- Single orchestrator instance (distributed in v2.0)
+- JSONL storage only (pluggable backends in v1.0)
+- No authentication (JWT in v0.3.0)
+- No web dashboard (planned v0.4.0)
 
-See [ROADMAP.md](ROADMAP.md) for future plans and [CHANGELOG.md](CHANGELOG.md) for release history.
-
----
-
-## 🙏 Acknowledgments
-
-- **Anthropic** for Claude and the MCP specification
-- **FastAPI** for async Python patterns
-- **Pydantic** for type-safe data modeling
-- **Rich** for beautiful TUI components
+See [ROADMAP.md](ROADMAP.md) and [CHANGELOG.md](CHANGELOG.md) for details.
 
 ---
 
