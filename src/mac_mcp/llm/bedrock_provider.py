@@ -1,5 +1,6 @@
 """AWS Bedrock provider implementation."""
 
+import asyncio
 import json
 from typing import Any
 
@@ -51,18 +52,21 @@ class BedrockProvider(LLMProvider):
         prompt: str,
         max_tokens: int = 4096,
         temperature: float = 0.7,
+        timeout: float = 60.0,
     ) -> str:
-        """Generate text using AWS Bedrock.
+        """Generate text using AWS Bedrock with timeout.
 
         Args:
             prompt: Input prompt
             max_tokens: Maximum tokens to generate
             temperature: Sampling temperature
+            timeout: Timeout in seconds (default: 60s)
 
         Returns:
             Generated text
 
         Raises:
+            asyncio.TimeoutError: If API call exceeds timeout
             Exception: If API call fails
         """
         # Prepare request body for Claude models on Bedrock
@@ -79,19 +83,29 @@ class BedrockProvider(LLMProvider):
             ],
         }
 
-        # Call Bedrock API
-        response = self.client.invoke_model(
-            modelId=self.model,
-            body=json.dumps(request_body),
-        )
+        # Wrap synchronous API call in executor with timeout
+        try:
+            response = await asyncio.wait_for(
+                asyncio.to_thread(
+                    self.client.invoke_model,
+                    modelId=self.model,
+                    body=json.dumps(request_body),
+                ),
+                timeout=timeout,
+            )
 
-        # Parse response
-        response_body = json.loads(response["body"].read())
+            # Parse response
+            response_body = json.loads(response["body"].read())
 
-        # Extract text from response
-        if "content" in response_body and response_body["content"]:
-            return response_body["content"][0]["text"]
-        return ""
+            # Extract text from response
+            if "content" in response_body and response_body["content"]:
+                return response_body["content"][0]["text"]
+            return ""
+
+        except asyncio.TimeoutError as e:
+            msg = f"AWS Bedrock API call exceeded timeout of {timeout}s"
+            # Use standard TimeoutError which accepts message, not asyncio.TimeoutError
+            raise TimeoutError(msg) from e
 
     def get_model_name(self) -> str:
         """Get the model identifier.

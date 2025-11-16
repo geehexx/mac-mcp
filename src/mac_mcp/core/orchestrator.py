@@ -476,11 +476,8 @@ class Orchestrator:
                 deps = [from_id for from_id, to_id in task_dag.edges if to_id == task.id]
                 task.dependencies = deps
 
-                # Store task
-                self._tasks[task.id] = task
-                created_tasks.append(task)
-
-                # Record task creation event
+                # Record task creation event FIRST (event sourcing principle)
+                # Events must be persisted before state mutation to ensure consistency
                 sequence = await self.event_store.get_latest_sequence() + 1
                 event = TaskCreatedEvent(
                     task_id=task.id,
@@ -494,6 +491,10 @@ class Orchestrator:
                     },
                 )
                 await self.event_store.append(event)
+
+                # Store task AFTER event is persisted successfully
+                self._tasks[task.id] = task
+                created_tasks.append(task)
 
             # Mark goal as ready
             task_ids = [t.id for t in created_tasks]

@@ -10,6 +10,7 @@ This module provides a beautiful terminal user interface for monitoring:
 
 import asyncio
 from datetime import datetime
+from time import time
 from typing import Any
 
 from rich.console import Console, Group
@@ -82,11 +83,22 @@ class Dashboard:
             Layout(name="tasks", ratio=2),
         )
 
-        # Right column: agents and events
-        layout["right"].split_column(
-            Layout(name="agents", ratio=1),
-            Layout(name="events", ratio=1) if self.config.show_events else Layout(name="empty"),
-        )
+        # Right column: agents and metrics/events
+        if self.config.show_metrics:
+            layout["right"].split_column(
+                Layout(name="agents", ratio=1),
+                Layout(name="metrics", ratio=1),
+            )
+        elif self.config.show_events:
+            layout["right"].split_column(
+                Layout(name="agents", ratio=1),
+                Layout(name="events", ratio=1),
+            )
+        else:
+            layout["right"].split_column(
+                Layout(name="agents", ratio=1),
+                Layout(name="empty", ratio=1),
+            )
 
         return layout
 
@@ -247,6 +259,76 @@ class Dashboard:
 
         return Panel(text, title="Recent Events", border_style="yellow")
 
+    def render_metrics(self) -> Panel:
+        """Render performance metrics panel.
+
+        Returns:
+            Rich Panel with performance metrics
+        """
+        table = Table(title="Performance Metrics", expand=True, show_header=True)
+        table.add_column("Metric", style="cyan", no_wrap=True)
+        table.add_column("Value", justify="right", style="green")
+
+        # Get data
+        tasks = list(self.orchestrator._tasks.values())
+        agents = self.orchestrator.supervisor.get_all_agents()
+        goals = list(self.orchestrator._goals.values())
+
+        # Calculate task throughput (tasks completed per hour)
+        completed_tasks = [t for t in tasks if t.state == TaskState.SUCCESS]
+        if completed_tasks:
+            # Calculate time range from first to last completed task
+            first_time = min(t.updated_at for t in completed_tasks)
+            last_time = max(t.updated_at for t in completed_tasks)
+            time_range_hours = (last_time - first_time).total_seconds() / 3600
+            throughput = len(completed_tasks) / time_range_hours if time_range_hours > 0 else 0
+        else:
+            throughput = 0.0
+
+        # Calculate average task completion time
+        if completed_tasks:
+            completion_times = [
+                (t.updated_at - t.created_at).total_seconds()
+                for t in completed_tasks
+                if t.created_at and t.updated_at
+            ]
+            avg_completion = sum(completion_times) / len(completion_times) if completion_times else 0
+        else:
+            avg_completion = 0.0
+
+        # Calculate agent utilization
+        if agents:
+            busy_agents = [a for a in agents if len(a.current_tasks) > 0]
+            utilization = len(busy_agents) / len(agents)
+        else:
+            utilization = 0.0
+
+        # Calculate error rate
+        failed_tasks = [t for t in tasks if t.state == TaskState.ERROR]
+        error_rate = len(failed_tasks) / len(tasks) if tasks else 0.0
+
+        # Calculate goal completion rate
+        completed_goals = [g for g in goals if g.state.value == "SUCCESS"]
+        goal_completion_rate = len(completed_goals) / len(goals) if goals else 0.0
+
+        # Add rows
+        table.add_row("Total Goals", str(len(goals)))
+        table.add_row("Completed Goals", str(len(completed_goals)))
+        table.add_row("Goal Success Rate", f"{goal_completion_rate:.0%}")
+        table.add_row("", "")  # Spacer
+        table.add_row("Total Tasks", str(len(tasks)))
+        table.add_row("Completed Tasks", str(len(completed_tasks)))
+        table.add_row("Failed Tasks", str(len(failed_tasks)))
+        table.add_row("Error Rate", f"{error_rate:.0%}")
+        table.add_row("", "")  # Spacer
+        table.add_row("Task Throughput", f"{throughput:.1f} tasks/hour")
+        table.add_row("Avg Completion", f"{avg_completion:.1f}s")
+        table.add_row("", "")  # Spacer
+        table.add_row("Active Agents", str(len(agents)))
+        table.add_row("Agent Utilization", f"{utilization:.0%}")
+
+        return Panel(table, border_style="yellow")
+
     def _get_state_style(self, state: str) -> str:
         """Get Rich style for task/goal state.
 
@@ -304,7 +386,12 @@ class Dashboard:
         layout["goals"].update(self.render_goals())
         layout["tasks"].update(self.render_tasks())
         layout["agents"].update(self.render_agents())
-        layout["events"].update(self.render_events())
+
+        # Render metrics or events based on config
+        if self.config.show_metrics:
+            layout["metrics"].update(self.render_metrics())
+        elif self.config.show_events:
+            layout["events"].update(self.render_events())
 
         return layout
 

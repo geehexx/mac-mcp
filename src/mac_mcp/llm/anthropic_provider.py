@@ -1,5 +1,7 @@
 """Anthropic API provider implementation."""
 
+import asyncio
+
 from anthropic import Anthropic
 
 from mac_mcp.llm.base import LLMProvider
@@ -28,36 +30,50 @@ class AnthropicProvider(LLMProvider):
         prompt: str,
         max_tokens: int = 4096,
         temperature: float = 0.7,
+        timeout: float = 60.0,
     ) -> str:
-        """Generate text using Anthropic API.
+        """Generate text using Anthropic API with timeout.
 
         Args:
             prompt: Input prompt
             max_tokens: Maximum tokens to generate
             temperature: Sampling temperature
+            timeout: Timeout in seconds (default: 60s)
 
         Returns:
             Generated text
 
         Raises:
+            asyncio.TimeoutError: If API call exceeds timeout
             Exception: If API call fails
         """
-        response = self.client.messages.create(
-            model=self.model,
-            max_tokens=max_tokens,
-            temperature=temperature,
-            messages=[
-                {
-                    "role": "user",
-                    "content": prompt,
-                }
-            ],
-        )
+        # Wrap synchronous API call in executor with timeout
+        try:
+            response = await asyncio.wait_for(
+                asyncio.to_thread(
+                    self.client.messages.create,
+                    model=self.model,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": prompt,
+                        }
+                    ],
+                ),
+                timeout=timeout,
+            )
 
-        # Extract text from response
-        if response.content:
-            return response.content[0].text
-        return ""
+            # Extract text from response
+            if response.content:
+                return response.content[0].text
+            return ""
+
+        except asyncio.TimeoutError as e:
+            msg = f"Anthropic API call exceeded timeout of {timeout}s"
+            # Use standard TimeoutError which accepts message, not asyncio.TimeoutError
+            raise TimeoutError(msg) from e
 
     def get_model_name(self) -> str:
         """Get the model identifier.
