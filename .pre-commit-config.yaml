@@ -1,0 +1,103 @@
+---
+# Pre-commit hooks for code quality
+# See https://pre-commit.com for more information
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+        exclude: ^config\.yaml$
+      - id: check-added-large-files
+        args: [--maxkb=1000]
+      - id: check-json
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: detect-private-key
+        exclude: ^tests/
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.7.4
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.13.0
+    hooks:
+      - id: mypy
+        additional_dependencies:
+          - pydantic>=2.9.0
+          - types-aiofiles
+        args: [--strict]
+        files: ^src/
+
+  - repo: https://github.com/python-poetry/poetry
+    rev: 1.8.0
+    hooks:
+      - id: poetry-check
+        always_run: false
+
+  - repo: local
+    hooks:
+      - id: pytest-check
+        name: pytest-check
+        entry: pytest
+        language: system
+        pass_filenames: false
+        always_run: true
+        args: [--tb=short, -q, -m, "not slow"]
+
+      - id: check-async-patterns
+        name: check-async-patterns
+        entry: python scripts/hooks/check_async_patterns.py
+        language: system
+        pass_filenames: false
+        files: ^src/
+
+      - id: check-event-immutability
+        name: check-event-immutability
+        entry: python scripts/hooks/check_event_immutability.py
+        language: system
+        pass_filenames: false
+        files: ^src/mac_mcp/domain/
+
+      - id: check-prohibited-files
+        name: check-prohibited-files
+        entry: bash -c 'if ls *SUMMARY*.md *HANDOFF*.md *TODO*.md 2>/dev/null; then echo "❌ Prohibited files found"; exit 1; fi'
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: check-secrets-in-config
+        name: check-secrets-in-config
+        entry: bash -c 'if git diff --cached --name-only | grep -q "^config\.yaml$"; then echo "❌ config.yaml contains secrets - use config.example.yaml"; exit 1; fi'
+        language: system
+        pass_filenames: false
+        always_run: true
+
+      - id: check-async-patterns
+        name: check-async-patterns
+        entry: python scripts/hooks/check_async_patterns.py
+        language: system
+        pass_filenames: false
+        always_run: false
+        files: ^src/
+
+      - id: check-event-immutability
+        name: check-event-immutability
+        entry: python scripts/hooks/check_event_immutability.py
+        language: system
+        pass_filenames: false
+        always_run: false
+        files: ^src/mac_mcp/domain/
+
+      - id: check-prohibited-files
+        name: check-prohibited-files
+        entry: bash -c 'if ls *SUMMARY*.md *HANDOFF*.md *TODO*.md 2>/dev/null; then echo "❌ Prohibited files found"; exit 1; fi'
+        language: system
+        pass_filenames: false
+        always_run: true

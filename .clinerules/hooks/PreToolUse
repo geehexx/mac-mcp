@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+# PreToolUse Hook - Validate operations before execution
+# Prevents common mistakes and enforces quality gates
+
+# Read JSON input from stdin
+input=$(cat)
+
+# Extract tool information
+tool_name=$(echo "$input" | jq -r '.preToolUse.toolName // "unknown"')
+parameters=$(echo "$input" | jq -c '.preToolUse.parameters // {}')
+
+# Initialize validation result
+cancel=false
+context=""
+error_message=""
+
+# Validation: Prevent creating prohibited files
+if [ "$tool_name" = "write_to_file" ]; then
+    file_path=$(echo "$parameters" | jq -r '.path // ""')
+    
+    # Check for prohibited file patterns
+    if echo "$file_path" | grep -qiE '(SUMMARY|HANDOFF|TODO).*\.md$'; then
+        cancel=true
+        error_message="❌ PROHIBITED FILE: Cannot create $file_path
+
+Files matching *SUMMARY*.md, *HANDOFF*.md, or *TODO*.md are not allowed.
+
+Instead:
+- Use CHANGELOG.md for user-facing changes
+- Use issue tracker or project management tools
+- Provide handoff information directly in conversation
+
+This prevents repository clutter and ensures information doesn't become stale."
+    fi
+fi
+
+# Validation: Warn about using filesystem mv instead of git mv
+if [ "$tool_name" = "execute_command" ]; then
+    command=$(echo "$parameters" | jq -r '.command // ""')
+    
+    if echo "$command" | grep -qE '^\s*mv\s+[^|&;]*\.(py|md|json|yaml|txt|sh)' && ! echo "$command" | grep -q "git mv"; then
+        context="⚠️ POTENTIAL ISSUE: Detected 'mv' command for version-controlled files
+
+You're using filesystem 'mv' which may leave unstaged deletions.
+
+RECOMMENDED: Use 'git mv' instead
+Example: git mv old/path/file.py new/path/file.py
+
+If you meant to use filesystem mv, ensure to stage both deletion and addition:
+  git add old/path/file.py new/path/file.py
+
+Check git status after operation to verify no unstaged deletions."
+    fi
+fi
+
+# Validation: Check for write_to_file vs replace_in_file usage
+if [ "$tool_name" = "write_to_file" ]; then
+    file_path=$(echo "$parameters" | jq -r '.path // ""')
+    
+    # Check if file exists (would be overwriting)
+    if [ -f "$file_path" ] && [ -s "$file_path" ]; then
+        context="💡 TOOL SELECTION: Using write_to_file to overwrite existing file: $file_path
+
+Consider if replace_in_file would be more appropriate for:
+- Small, targeted changes (updating a few lines)
+- Files >100 lines where most content stays the same
+- Situations where you want to preserve unchanged sections
+
+write_to_file is appropriate for:
+- Creating new files
+- Complete restructuring
+- Files where >50% of content changes
+- Initial scaffolding
+
+If you're making targeted edits, consider using replace_in_file instead."
+    fi
+fi
+
+# Output JSON response
+jq -n \
+  --argjson cancel "$cancel" \
+  --arg ctx "$context" \
+  --arg err "$error_message" \
+  '{
+    "cancel": $cancel,
+    "contextModification": (if $ctx != "" then $ctx else null end),
+    "errorMessage": (if $err != "" then $err else null end)
+  }'

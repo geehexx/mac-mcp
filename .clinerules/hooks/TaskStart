@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# TaskStart Hook - Initialize context when starting tasks
+# Injects project-specific context and workflow guidance
+
+# Read JSON input from stdin
+input=$(cat)
+
+# Extract task information using jq
+task_id=$(echo "$input" | jq -r '.taskId // "unknown"')
+initial_task=$(echo "$input" | jq -r '.taskStart.taskMetadata.initialTask // "No description"')
+
+# Build context modification
+context="TASK INITIALIZATION
+
+Project: MAC MCP (Multi-Agent Coordination MCP Server)
+Task ID: $task_id
+Description: $initial_task
+
+## 🎯 Quick Reference
+
+**Critical Commands**: pytest --cov=src (≥90%) | git mv (NEVER filesystem mv) | mypy src/ (strict)
+
+**Quality Gates**: ≥90% coverage | mypy strict | ruff format | Event immutability | Async-first
+
+**Prohibitions**: NO *SUMMARY*.md | NO *HANDOFF*.md | NO *TODO*.md | NO mutable events | NO blocking I/O in async | NO --no-verify
+
+## 📋 Core Principles
+
+1. **Event Sourcing**: All state changes are immutable events (frozen=True)
+2. **Actor Model**: Agents communicate via orchestrator only
+3. **Async First**: All I/O operations must be non-blocking
+4. **Type Safety**: Use Pydantic v2 for validation, mypy strict mode
+5. **Quality First**: ≥90% test coverage, no shortcuts
+
+## 🔍 Before Implementation
+
+- [ ] Requirement crystal clear (use ask_followup_question if not)
+- [ ] Study 2-3 similar implementations for patterns
+- [ ] Check for existing solutions (patterns, libraries)
+- [ ] Validate approach aligns with architecture
+- [ ] **Create todo list for multi-step tasks** (MANDATORY if >2 tool calls OR >1 file)
+
+## 📚 Reference Files
+
+- Core workflows: .clinerules/rules/core/development-workflow.md
+- Expert review: .clinerules/rules/core/expert-review-panel.md
+- Quality procedures: .clinerules/rules/core/quality-procedures.md
+- Code patterns: .clinerules/rules/reference/code-patterns.md
+
+## 🎨 Code Standards
+
+- Imports: stdlib → third-party → local
+- Types: dict[str, Any], Callable from collections.abc (NOT Optional, Dict, List)
+- Docstrings: Google-style for all public APIs
+- Async: Use aiofiles, asyncio (never blocking I/O)
+- Testing: Unit + Integration + Property tests
+
+## ⚠️ Common Pitfalls
+
+- ❌ Optional[T] → Use T | None
+- ❌ Dict/List → Use dict/list
+- ❌ Blocking I/O in async → Use aiofiles
+- ❌ Mutable events → Use frozen=True
+- ❌ filesystem mv → Use git mv
+
+Ready to start! Remember to create a todo list if this is a multi-step task."
+
+# Output JSON response
+jq -n \
+  --arg ctx "$context" \
+  '{
+    "cancel": false,
+    "contextModification": $ctx
+  }'

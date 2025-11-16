@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+# PostToolUse Hook - Learn from completed operations
+# Track patterns and provide guidance for future actions
+
+# Read JSON input from stdin
+input=$(cat)
+
+# Extract tool information
+tool_name=$(echo "$input" | jq -r '.postToolUse.toolName // "unknown"')
+success=$(echo "$input" | jq -r '.postToolUse.success // false')
+result=$(echo "$input" | jq -r '.postToolUse.result // ""')
+execution_time=$(echo "$input" | jq -r '.postToolUse.executionTimeMs // 0')
+
+# Initialize context
+context=""
+
+# Track git commit failures
+if [ "$tool_name" = "execute_command" ] && [ "$success" = "false" ]; then
+    command=$(echo "$input" | jq -r '.postToolUse.parameters.command // ""')
+    
+    if echo "$command" | grep -q "git commit"; then
+        # Check if it was a pre-commit hook failure
+        if echo "$result" | grep -qiE "(hook failed|Files were modified|mypy|ruff|pytest)"; then
+            context="⚠️ GIT COMMIT FAILED - Pre-commit Hook Detected
+
+The commit failed due to pre-commit hooks. This is EXPECTED BEHAVIOR.
+
+## Proper Workflow
+
+**If hooks auto-fixed files:**
+1. git add -u  # Stage all auto-fixed files
+2. git commit -m \"<same message>\"  # Retry with same message
+
+**If hooks reported errors:**
+1. Review the error messages above
+2. Fix the code manually (e.g., mypy errors, test failures)
+3. git add <fixed-files>
+4. git commit -m \"<same message>\"
+
+**NEVER use --no-verify** - This defeats quality gates!
+
+Pre-commit hooks enforce:
+- Code formatting (ruff format)
+- Linting (ruff check)
+- Type checking (mypy)
+- Tests (pytest)
+
+These are your only quality gates - embrace them!"
+        fi
+    fi
+fi
+
+# Track write operations for large files
+if [ "$tool_name" = "write_to_file" ] && [ "$success" = "true" ]; then
+    file_path=$(echo "$input" | jq -r '.postToolUse.parameters.path // ""')
+    content_length=$(echo "$input" | jq -r '.postToolUse.parameters.content // ""' | wc -c)
+    
+    if [ "$content_length" -gt 5000 ]; then
+        context="📊 LARGE FILE WRITTEN: $file_path (${content_length} bytes)
+
+For future edits to this file:
+- Consider using replace_in_file for targeted changes
+- Break large files into smaller modules if possible
+- Ensure proper documentation for maintainability"
+    fi
+fi
+
+# Track slow operations
+if [ "$execution_time" -gt 5000 ]; then
+    seconds=$((execution_time / 1000))
+    context="⏱️ SLOW OPERATION: $tool_name took ${seconds}s
+
+Consider:
+- Caching results if possible
+- Running in background if appropriate
+- Optimizing the operation if frequently needed"
+fi
+
+# Track successful test runs
+if [ "$tool_name" = "execute_command" ] && [ "$success" = "true" ]; then
+    command=$(echo "$input" | jq -r '.postToolUse.parameters.command // ""')
+    
+    if echo "$command" | grep -q "pytest"; then
+        if echo "$result" | grep -q "passed"; then
+            passed=$(echo "$result" | grep -oP '\d+(?= passed)' | head -1)
+            if [ -n "$passed" ] && [ "$passed" -gt 0 ]; then
+                context="✅ TESTS PASSED: $passed test(s) successful
+
+Good practice! Continue to:
+- Maintain ≥90% coverage
+- Add integration and property tests where applicable
+- Keep tests fast (<1s each)
+- Ensure tests are deterministic"
+            fi
+        fi
+    fi
+fi
+
+# Output JSON response
+jq -n \
+  --arg ctx "$context" \
+  '{
+    "cancel": false,
+    "contextModification": (if $ctx != "" then $ctx else null end)
+  }'
