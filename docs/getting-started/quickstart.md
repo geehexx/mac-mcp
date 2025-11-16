@@ -13,7 +13,7 @@ A Python agent that:
 ## Prerequisites
 
 - Python 3.12+
-- MAC MCP Server running (see [README.md](../README.md) for installation)
+- MAC MCP Server running (see [README.md](../../README.md) for installation)
 - Basic Python knowledge
 
 ## Step 1: Create Agent File (2 minutes)
@@ -298,9 +298,9 @@ The complete `my_agent.py` is available in `examples/simple_agent.py` in the rep
 
 ## Resources
 
-- [Agent Integration Guide](../AGENTS.md) - Detailed agent development guide
-- [MCP Protocol Spec](../PROTOCOL.md) - Complete protocol reference
-- [Architecture Overview](../ARCHITECTURE.md) - System design and patterns
+- [Agent Integration Guide](../guides/agent-integration.md) - Detailed agent development guide
+- [MCP Protocol Spec](../reference/protocol.md) - Complete protocol reference
+- [Architecture Overview](../reference/architecture.md) - System design and patterns
 
 ---
 

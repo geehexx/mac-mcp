@@ -244,10 +244,10 @@ You should see:
 
 ## Additional Resources
 
-- [Tutorial: Build Your First Agent in 10 Minutes](../TUTORIAL.md)
-- [Agent Integration Guide](../AGENTS.md)
-- [MCP Protocol Specification](../PROTOCOL.md)
-- [Architecture Overview](../ARCHITECTURE.md)
+- [Tutorial: Build Your First Agent in 10 Minutes](../getting-started/quickstart.md)
+- [Agent Integration Guide](../guides/agent-integration.md)
+- [MCP Protocol Specification](../reference/protocol.md)
+- [Architecture Overview](../reference/architecture.md)
 
 ---
 

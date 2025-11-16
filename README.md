@@ -1,117 +1,323 @@
-# MAC MCP Server
+<div align="center">
 
-Multi-Agent Coordination server for autonomous LLM agent teams using the Model Context Protocol.
+# 🤖 MAC MCP Server
 
-## Features
+**Multi-Agent Coordination via Model Context Protocol**
 
-- **Autonomous Goal Decomposition**: LLM-powered task graph generation
-- **Agent Orchestration**: Supervisor/worker pattern with capability matching
-- **Event Sourcing**: Immutable JSONL event log for state management
-- **Pull-based Task Assignment**: Agents claim work matching their capabilities
-- **Fault Tolerance**: Heartbeat monitoring and automatic task reassignment
-- **Multi-Provider LLM**: Anthropic API or AWS Bedrock support
+![Python](https://img.shields.io/badge/python-3.12%2B-blue)
+![MCP](https://img.shields.io/badge/MCP-June%202025-purple)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Status](https://img.shields.io/badge/status-alpha-orange)
 
-## Installation
+*Event-sourced orchestration for autonomous LLM agent collaboration*
+
+[Quick Start](#-quick-start) • [Documentation](docs/) • [Examples](examples/) • [Roadmap](ROADMAP.md)
+
+</div>
+
+---
+
+## ✨ Features
+
+<table>
+<tr>
+<td width="50%">
+
+### 🎯 Autonomous Coordination
+- **LLM-powered goal decomposition** into executable task DAGs
+- **Dependency-aware scheduling** with automatic topological sorting
+- **Capability-based task matching** to specialized agents
+
+</td>
+<td width="50%">
+
+### 🔄 Event Sourcing
+- **Complete audit trail** of all system actions
+- **Time-travel debugging** via event replay
+- **State reconstruction** from append-only log
+
+</td>
+</tr>
+<tr>
+<td>
+
+### 🤝 Agent Management
+- **Pull-based assignment** prevents agent overload
+- **Heartbeat monitoring** with automatic timeout detection
+- **Capability matching** routes tasks to qualified agents
+
+</td>
+<td>
+
+### 🛡️ Production Ready
+- **MCP June 2025 compliant** with typed outputSchema
+- **Multi-provider LLM** (Anthropic, AWS Bedrock)
+- **Real-time TUI dashboard** for monitoring
+
+</td>
+</tr>
+</table>
+
+---
+
+## 🏗 Architecture
+
+```
+┌─────────────┐
+│   Claude    │ ← MCP Client (stdio, SSE, or HTTP transport)
+│  (any LLM)  │
+└──────┬──────┘
+       │
+       │ MCP Protocol (8 tools)
+       │
+┌──────▼────────────────────────────────────────────────┐
+│              MAC MCP Server                           │
+│  ┌────────────────────────────────────────────────┐   │
+│  │           Orchestrator (Coordinator)           │   │
+│  │  • Goal decomposition (LLM-powered)            │   │
+│  │  • Task DAG management                         │   │
+│  │  • Dependency resolution                       │   │
+│  │  • Event sourcing (JSONL append-only log)      │   │
+│  └────────────────────────────────────────────────┘   │
+│                                                        │
+│  ┌────────────────────────────────────────────────┐   │
+│  │           Supervisor (Agent Manager)           │   │
+│  │  • Agent registration & capabilities           │   │
+│  │  • Heartbeat monitoring (90s timeout)          │   │
+│  │  • Health status tracking                      │   │
+│  └────────────────────────────────────────────────┘   │
+└────────────────────────────────────────────────────────┘
+       │
+       │ MCP Tool Calls (claim_task, complete_task, etc.)
+       │
+┌──────┴──────┬──────────┬──────────┬──────────┐
+│  Agent 1    │ Agent 2  │ Agent 3  │ Agent N  │
+│  (Python)   │ (Testing)│  (Docs)  │  (...)   │
+│             │          │          │          │
+│ Capabilities│ pytest   │ markdown │ Custom   │
+│ python, api │ coverage │ diagrams │ skills   │
+└─────────────┴──────────┴──────────┴──────────┘
+```
+
+**Key Patterns**:
+- **Event Sourcing**: All state changes captured as immutable events
+- **Actor Model**: No direct agent-to-agent communication
+- **Pull-based**: Agents claim work when ready (backpressure control)
+- **CQRS**: Separate read (query) and write (command) paths
+
+---
+
+## 🚀 Quick Start
+
+### Installation
 
 ```bash
-git clone https://github.com/geehexx/mac-mcp.git
+# Install from PyPI (when published)
+pip install mac-mcp
+
+# Or install from source
+git clone https://github.com/yourusername/mac-mcp.git
 cd mac-mcp
 pip install -e .
 ```
 
-## Configuration
+### Configuration
 
-Create `config.yaml`:
+```bash
+# Copy example configuration
+cp config.example.yaml config.yaml
 
+# Edit configuration with your API keys
+# Required: Anthropic API key OR AWS Bedrock access
+```
+
+Example `config.yaml`:
 ```yaml
 llm:
-  provider: "anthropic"  # or "bedrock"
-  model: "claude-sonnet-4-5-20250929"
-  api_key: "your-api-key"
+  provider: anthropic  # or 'bedrock'
+  model: claude-sonnet-4-5-20250929
+  api_key: ${ANTHROPIC_API_KEY}  # From environment
 
-server:
-  transport: "stdio"
-  event_store_path: "data/events.jsonl"
+storage:
+  type: jsonl
+  path: ./data/events.jsonl
 
-ui:
-  mode: "tui"  # or "headless"
+orchestrator:
+  max_retries: 3
+  timeout_seconds: 300
 ```
 
-Or use environment variables with `MAC_` prefix.
-
-## Usage
+### Running the Server
 
 ```bash
-# Start server
-mac-mcp --config config.yaml
-
-# With TUI dashboard
+# Start server with TUI dashboard
 mac-mcp --config config.yaml --ui tui
 
-# Headless mode
-mac-mcp --config config.yaml --ui headless
+# Or start in headless mode
+mac-mcp --config config.yaml
 ```
 
-## MCP Tools
+### Submit Your First Goal
 
-Agents use these tools to interact with the server:
+```python
+from mcp import Client
 
-- `register_agent`: Register with capabilities
-- `claim_task`: Pull next available task
-- `update_task_progress`: Report progress
-- `complete_task`: Submit results
-- `fail_task`: Report errors
-- `send_heartbeat`: Maintain status
-- `submit_goal`: Create new goal (advanced)
-- `request_dependency`: Get dependency results
+async def main():
+    client = Client("stdio")  # Connect to MAC MCP Server
+    await client.connect()
 
-## Architecture
+    # Submit a goal
+    result = await client.call_tool("submit_goal", {
+        "goal_id": "auth_system",
+        "description": "Build user authentication system with JWT",
+        "context": {
+            "language": "python",
+            "framework": "fastapi",
+            "requirements": ["registration", "login", "token refresh"]
+        }
+    })
 
-The server implements:
+    print(result)  # Goal decomposed into tasks
 
-1. **Actor Model**: No direct agent-to-agent communication
-2. **Event Sourcing**: All state changes logged to JSONL
-3. **Supervisor Pattern**: Health monitoring and failure handling
-4. **State Machine**: Deterministic task state transitions
+asyncio.run(main())
+```
 
-See [ARCHITECTURE.md](ARCHITECTURE.md) for details.
+**Next**: Follow the [10-minute tutorial](docs/getting-started/quickstart.md) to build your first agent.
 
-## Agent Integration
+---
 
-**New to MAC MCP?** Start with our [10-Minute Tutorial](TUTORIAL.md) to build your first agent.
+## 📖 Documentation
 
-See [AGENTS.md](AGENTS.md) for complete agent implementation reference.
+| Category | Description | Links |
+|----------|-------------|-------|
+| **Getting Started** | New to MAC MCP? Start here. | [Quick Start](docs/getting-started/quickstart.md) |
+| **Guides** | How-to guides for common tasks | [Agent Integration](docs/guides/agent-integration.md) |
+| **Reference** | Technical specifications | [Protocol Spec](docs/reference/protocol.md) • [Architecture](docs/reference/architecture.md) |
+| **Examples** | Working code examples | [Simple Agent](docs/examples/README.md) • [Code Samples](examples/) |
 
-## Development
+---
+
+## 🎯 Use Cases
+
+**1. Software Development**
+- Decompose "build feature X" into design → implement → test → document tasks
+- Specialized agents for Python, testing, documentation, code review
+- Autonomous execution with human approval at milestones
+
+**2. Research & Analysis**
+- Break down research questions into data gathering → analysis → synthesis
+- Parallel execution of independent research threads
+- Consolidated reporting from multiple sources
+
+**3. Content Creation**
+- Outline → draft → edit → publish workflows
+- Specialized agents for writing, editing, fact-checking, SEO
+- Dependency management ensures proper ordering
+
+**4. Data Pipelines**
+- ETL workflows decomposed into extract → transform → load stages
+- Retry logic for transient failures
+- Event log provides complete data lineage
+
+---
+
+## 🔧 MCP Tools
+
+MAC MCP Server implements 8 tools via the Model Context Protocol:
+
+| Tool | Description | Input | Output |
+|------|-------------|-------|--------|
+| `submit_goal` | Submit high-level goal for decomposition | goal_id, description, context | Goal with task DAG |
+| `register_agent` | Register agent with capabilities | agent_id, capabilities | Registration confirmation |
+| `claim_task` | Claim next available task | agent_id, capabilities | Task or null |
+| `report_progress` | Update task progress | task_id, progress, message | Acknowledgment |
+| `complete_task` | Mark task complete | task_id, result | Completion + unblocked tasks |
+| `fail_task` | Report task failure | task_id, error | Retry decision |
+| `request_dependency` | Get dependency result | task_id, dependency_id | Dependency output |
+| `heartbeat` | Maintain agent liveness | agent_id, status | Acknowledgment |
+
+See [Protocol Reference](docs/reference/protocol.md) for detailed schemas.
+
+---
+
+## 🧪 Development
 
 ```bash
+# Install development dependencies
+pip install -e ".[dev]"
+
 # Run tests
 pytest
 
-# Type checking
-mypy src
+# Run with coverage
+pytest --cov=src/mac_mcp --cov-report=html
 
-# Linting
-ruff check src
+# Lint and format
+ruff check src/
+ruff format src/
+
+# Type checking
+mypy src/
 ```
 
-## Documentation
+---
 
-- **[TUTORIAL.md](TUTORIAL.md)** - 🆕 Build your first agent in 10 minutes (Beginner)
-- [AGENTS.md](AGENTS.md) - Agent integration guide (Reference)
-- [PROTOCOL.md](PROTOCOL.md) - MCP protocol specification (Reference)
-- [ARCHITECTURE.md](ARCHITECTURE.md) - System design and patterns (Explanation)
-- [ROADMAP.md](ROADMAP.md) - Future enhancements (Planning)
-- [IMPROVEMENTS_2025.md](IMPROVEMENTS_2025.md) - 2025 best practices review & roadmap
+## 🤝 Contributing
 
-## 2025 Standards Compliance
+We welcome contributions! Here's how to get started:
 
-This project follows 2025 best practices for multi-agent LLM systems. See [IMPROVEMENTS_2025.md](IMPROVEMENTS_2025.md) for:
-- Expert panel review findings
-- ✅ Implemented improvements: Event validation, MCP outputSchema, Tutorial
-- ⏸️ Recommended enhancements: Context engineering, dry-run mode, OpenTelemetry, etc.
-- Priority matrix and implementation roadmap
+1. **Fork** the repository
+2. **Create** a feature branch (`git checkout -b feature/amazing-feature`)
+3. **Commit** your changes (`git commit -m 'Add amazing feature'`)
+4. **Push** to the branch (`git push origin feature/amazing-feature`)
+5. **Open** a Pull Request
 
-## License
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
-MIT License - see LICENSE file for details.
+---
+
+## 📊 Project Status
+
+**Current Version**: v0.1.0 (Alpha)
+
+**What Works**:
+- ✅ Goal decomposition with LLM
+- ✅ Task DAG with dependencies
+- ✅ Agent registration and heartbeat
+- ✅ Pull-based task assignment
+- ✅ Event sourcing (JSONL)
+- ✅ TUI dashboard
+- ✅ MCP June 2025 compliance
+
+**Known Limitations**:
+- ⚠️ Single orchestrator instance (distributed planned for v2.0)
+- ⚠️ JSONL storage only (pluggable backends planned for v1.0)
+- ⚠️ No authentication (JWT planned for v0.3.0)
+- ⚠️ No web dashboard (planned for v0.4.0)
+
+See [ROADMAP.md](ROADMAP.md) for future plans and [CHANGELOG.md](CHANGELOG.md) for release history.
+
+---
+
+## 🙏 Acknowledgments
+
+- **Anthropic** for Claude and the MCP specification
+- **FastAPI** for async Python patterns
+- **Pydantic** for type-safe data modeling
+- **Rich** for beautiful TUI components
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see [LICENSE](LICENSE) for details.
+
+---
+
+<div align="center">
+
+**Built with ❤️ using Claude and the Model Context Protocol**
+
+⭐ Star us on GitHub • 🐛 Report issues • 💡 Request features
+
+</div>
