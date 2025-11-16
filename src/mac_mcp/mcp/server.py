@@ -11,6 +11,7 @@ from mcp.server.stdio import stdio_server
 from mcp.types import Resource, TextContent, Tool
 
 from mac_mcp.core.orchestrator import Orchestrator
+from mac_mcp.mcp.handlers import get_handler
 from mac_mcp.storage.base import EventStore
 
 
@@ -309,161 +310,22 @@ def create_server(
 
     @server.call_tool()
     async def call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:
-        """Handle tool calls."""
-        if name == "submit_goal":
-            dry_run = arguments.get("dry_run", False)
-            result = await orchestrator.submit_goal(
-                goal_id=arguments["goal_id"],
-                description=arguments["description"],
-                context=arguments.get("context"),
-                constraints=arguments.get("constraints"),
-                dry_run=dry_run,
-            )
+        """Handle tool calls using handler registry.
 
-            # Handle dry-run preview
-            if dry_run:
-                # Result is TaskDAG
-                import json
-                task_dag = result
-                preview_data = {
-                    "goal_id": arguments["goal_id"],
-                    "state": "PREVIEW",
-                    "is_preview": True,
-                    "task_count": len(task_dag.tasks),
-                    "task_ids": [t.id for t in task_dag.tasks],
-                    "tasks": [
-                        {
-                            "id": t.id,
-                            "description": t.description,
-                            "required_capabilities": t.required_capabilities,
-                            "dependencies": t.dependencies,
-                        }
-                        for t in task_dag.tasks
-                    ],
-                }
-                return [
-                    TextContent(
-                        type="text",
-                        text=f"🔍 DRY-RUN PREVIEW for goal {arguments['goal_id']}:\n\n"
-                             f"Would create {len(task_dag.tasks)} tasks:\n"
-                             + "\n".join([f"  - {t.id}: {t.description}" for t in task_dag.tasks])
-                             + f"\n\nTo execute, call submit_goal again with dry_run=false\n\n"
-                             f"Full preview:\n{json.dumps(preview_data, indent=2)}",
-                    )
-                ]
+        This implementation uses the Handler/Strategy pattern to eliminate
+        the massive if-elif chain. Each tool has a dedicated handler function
+        in the handlers module.
 
-            # Handle actual submission
-            goal = result
-            return [
-                TextContent(
-                    type="text",
-                    text=f"✅ Goal {goal.id} submitted and decomposed into {len(goal.task_ids)} tasks",
-                )
-            ]
+        2025 Best Practice: Use handler registries for extensibility.
+        """
+        # Look up handler for this tool
+        handler = get_handler(name)
 
-        if name == "register_agent":
-            agent = await orchestrator.supervisor.register_agent(
-                agent_id=arguments["agent_id"],
-                capabilities=arguments["capabilities"],
-                metadata=arguments.get("metadata"),
-            )
-            return [
-                TextContent(
-                    type="text",
-                    text=f"Agent {agent.id} registered successfully with capabilities: {agent.capabilities}",
-                )
-            ]
+        if handler is None:
+            return [TextContent(type="text", text=f"❌ Unknown tool: {name}")]
 
-        if name == "claim_task":
-            task = await orchestrator.claim_task(
-                agent_id=arguments["agent_id"],
-                capabilities=arguments["capabilities"],
-            )
-            if task is None:
-                return [TextContent(type="text", text="No matching tasks available")]
-
-            return [
-                TextContent(
-                    type="text",
-                    text=f"Task {task.id} assigned: {task.description}",
-                )
-            ]
-
-        if name == "report_progress":
-            await orchestrator.update_task_progress(
-                task_id=arguments["task_id"],
-                agent_id=arguments["agent_id"],
-                progress=arguments["progress"],
-                message=arguments.get("message"),
-                artifacts=arguments.get("artifacts"),
-            )
-            return [
-                TextContent(
-                    type="text",
-                    text=f"Progress updated for task {arguments['task_id']}: {arguments['progress']}",
-                )
-            ]
-
-        if name == "complete_task":
-            await orchestrator.complete_task(
-                task_id=arguments["task_id"],
-                agent_id=arguments["agent_id"],
-                result=arguments["result"],
-            )
-            return [
-                TextContent(
-                    type="text",
-                    text=f"Task {arguments['task_id']} completed successfully",
-                )
-            ]
-
-        if name == "fail_task":
-            action = await orchestrator.fail_task(
-                task_id=arguments["task_id"],
-                agent_id=arguments["agent_id"],
-                error=arguments["error"],
-            )
-            return [
-                TextContent(
-                    type="text",
-                    text=f"Task {arguments['task_id']} failed. Action: {action}",
-                )
-            ]
-
-        if name == "request_dependency":
-            result = orchestrator.get_dependency_result(arguments["task_id"])
-            if result is None:
-                return [
-                    TextContent(
-                        type="text",
-                        text=f"Dependency task {arguments['task_id']} not found or not completed",
-                    )
-                ]
-
-            import json
-
-            return [
-                TextContent(
-                    type="text",
-                    text=f"Dependency result: {json.dumps(result, indent=2)}",
-                )
-            ]
-
-        if name == "heartbeat":
-            await orchestrator.supervisor.update_heartbeat(
-                agent_id=arguments["agent_id"],
-                status=arguments["status"],
-                current_tasks=arguments.get("current_tasks"),
-                load=arguments.get("load"),
-            )
-            return [
-                TextContent(
-                    type="text",
-                    text=f"Heartbeat received from agent {arguments['agent_id']}",
-                )
-            ]
-
-        return [TextContent(type="text", text=f"Unknown tool: {name}")]
+        # Delegate to handler
+        return await handler(orchestrator, arguments)
 
     # Resources
     @server.list_resources()
