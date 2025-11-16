@@ -16,11 +16,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Examples documentation with LLM integration guides
 - Structured output schemas for type-safe tool responses
 - Event semantic validation (required fields per event type)
+- EventPublisher utility class for centralized event creation
+- MCP tool handler registry (Handler/Strategy pattern)
+- Production deployment guide (systemd, Docker, Kubernetes)
+- CHANGELOG.md for release history tracking
 
 ### Changed
 - Documentation restructured into docs/ directory following Diátaxis framework
+  - docs/getting-started/ - Tutorials for beginners
+  - docs/guides/ - How-to guides (agent integration, production deployment)
+  - docs/reference/ - Technical specifications (protocol, architecture)
+  - docs/examples/ - Working code examples
 - README optimized with visual design and badges
+  - Added badges (Python 3.12+, MCP June 2025, MIT License, Alpha status)
+  - Added feature grid with icons
+  - Added ASCII architecture diagram
+  - Added quick start section and use cases
 - ROADMAP consolidated as single source of truth for future work
+- Orchestrator and Supervisor now use EventPublisher (~110 lines deduplication)
+- MCP server call_tool() simplified from 157 lines to 15 lines (90% reduction)
+
+### Refactored
+- Extracted EventPublisher utility (eliminated duplication across 11 locations)
+- Extracted MCP tool handlers into registry pattern (reduced complexity by 87%)
+- Each MCP tool now has dedicated handler function for maintainability
+
+### Removed
+- IMPROVEMENTS_2025.md (historical artifact - content moved to CHANGELOG/ROADMAP)
+
+### Performance
+- EventPublisher reduces event creation overhead
+- Handler registry enables O(1) tool lookup vs O(n) if-elif chain
 
 ## [0.1.0] - 2025-11-15
 
