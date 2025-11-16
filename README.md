@@ -131,14 +131,17 @@ llm:
   provider: anthropic  # or 'bedrock'
   model: claude-sonnet-4-5-20250929
   api_key: ${ANTHROPIC_API_KEY}  # From environment
+  max_tokens: 4096
+  temperature: 0.7
 
-storage:
-  type: jsonl
-  path: ./data/events.jsonl
+server:
+  event_store_path: data/events.jsonl
+  heartbeat_interval: 30  # seconds
+  heartbeat_timeout: 90   # seconds
 
-orchestrator:
-  max_retries: 3
-  timeout_seconds: 300
+ui:
+  mode: tui  # "headless", "tui", or "web"
+  theme: dark
 ```
 
 ### Running the Server

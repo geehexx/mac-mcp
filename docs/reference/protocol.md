@@ -11,7 +11,7 @@ Register agent with capabilities.
 **Parameters**:
 - `agent_id` (string, required): Unique agent identifier
 - `capabilities` (array, required): List of capability strings
-- `max_concurrent_tasks` (integer, optional): Max concurrent tasks (default: 5)
+- `metadata` (object, optional): Agent metadata (model, version, etc.)
 
 **Returns**: `{"status": "registered", "agent_id": "..."}`
 
@@ -32,7 +32,7 @@ Pull next available task matching agent capabilities.
 - `AGENT_NOT_FOUND`: Agent not registered
 - `AGENT_AT_CAPACITY`: Agent has max concurrent tasks
 
-### update_task_progress
+### report_progress
 
 Report task progress.
 
@@ -80,7 +80,7 @@ Report task failure.
 - `TASK_NOT_FOUND`: Task does not exist
 - `UNAUTHORIZED`: Agent not assigned to task
 
-### send_heartbeat
+### heartbeat
 
 Maintain agent liveness.
 
@@ -173,7 +173,7 @@ All events have: `type`, `timestamp`, `sequence`, `payload`
 
 ## Heartbeat Protocol
 
-- Agents send `send_heartbeat` every 30 seconds
+- Agents send `heartbeat` every 30 seconds
 - Server timeout after 90 seconds without heartbeat
 - On timeout:
   1. Emit `heartbeat_timeout` event

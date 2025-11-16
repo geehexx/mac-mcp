@@ -117,7 +117,10 @@ ls -lh /var/lib/mac-mcp/events.jsonl
 
 ### Resource Limits
 
+> **Note**: These configuration options are planned for v0.2.0.
+
 ```yaml
+# Planned for v0.2.0
 orchestrator:
   max_goals: 100
   max_tasks_per_goal: 50
@@ -126,12 +129,9 @@ orchestrator:
 
 ### LLM Rate Limiting
 
-```yaml
-llm:
-  rate_limit:
-    requests_per_minute: 50
-    retry_on_429: true
-```
+> **Note**: Rate limiting configuration is planned for v0.2.0. Currently, rate limits are handled by the LLM provider's SDK (Anthropic/Bedrock).
+
+For manual rate limiting in v0.1.0, control request frequency via `server.heartbeat_interval` and agent concurrency settings.
 
 ## Backups
 

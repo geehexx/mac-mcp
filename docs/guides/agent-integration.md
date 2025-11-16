@@ -20,14 +20,14 @@ Register agent with capabilities.
 **Parameters**:
 - `agent_id` (string, required): Unique agent identifier
 - `capabilities` (array, required): List of capability strings
-- `max_concurrent_tasks` (integer, optional): Max concurrent tasks (default: 5)
+- `metadata` (object, optional): Agent metadata (model, version, etc.)
 
 **Example**:
 ```json
 {
   "agent_id": "agent_001",
   "capabilities": ["python", "testing"],
-  "max_concurrent_tasks": 3
+  "metadata": {"model": "claude-sonnet-4", "version": "1.0.0"}
 }
 ```
 
@@ -49,7 +49,7 @@ Pull next available task matching agent capabilities.
 }
 ```
 
-### update_task_progress
+### report_progress
 
 Report task progress.
 
@@ -113,7 +113,7 @@ Report task failure.
 }
 ```
 
-### send_heartbeat
+### heartbeat
 
 Maintain agent liveness.
 
@@ -198,7 +198,7 @@ class Agent:
 
     async def heartbeat_loop(self):
         while True:
-            await self.mcp.call_tool("send_heartbeat", {
+            await self.mcp.call_tool("heartbeat", {
                 "agent_id": self.agent_id
             })
             await asyncio.sleep(30)
@@ -212,7 +212,7 @@ class Agent:
     async def execute(self, task):
         try:
             # Update progress
-            await self.mcp.call_tool("update_task_progress", {
+            await self.mcp.call_tool("report_progress", {
                 "task_id": task["id"],
                 "agent_id": self.agent_id,
                 "progress": 0.5

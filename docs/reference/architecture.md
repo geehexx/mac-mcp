@@ -118,7 +118,7 @@ Agent → claim_task → Orchestrator
            ▼              ▼
      Task assigned → RUNNING
            │
-           ├─→ update_task_progress
+           ├─→ report_progress
            │
            ├─→ request_dependency (if needed)
            │

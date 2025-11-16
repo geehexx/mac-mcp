@@ -60,7 +60,7 @@ class AgentSupervisor:
         self,
         agent_id: str,
         capabilities: list[str],
-        metadata: dict[str, any] | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> Agent:
         """Register a new agent.
 
