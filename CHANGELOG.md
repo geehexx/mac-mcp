@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **API key authentication system** for alpha/development (P0 security)
+- **Authorization checks** on all 8 MCP tool handlers (P0 security)
+- **Schema versioning** in Event model for future migrations
+- **Auth module** with APIKeyAuth class (generate, validate, revoke keys)
+- **Auth middleware** in MCP server call_tool()
+- **Security warnings** prominently displayed in README
 - Event validation before persistence (prevents data corruption)
 - MCP June 2025 compliance with outputSchema for all 8 tools
 - Dry-run mode for submit_goal (human-in-the-loop preview)
@@ -19,9 +25,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - EventPublisher utility class for centralized event creation
 - MCP tool handler registry (Handler/Strategy pattern)
 - Production deployment guide (systemd, Docker, Kubernetes)
-- CHANGELOG.md for release history tracking
+- Comprehensive test suite for authentication (tests/unit/test_auth.py)
+- Expert panel review documentation (3 rounds, unlimited debate)
 
 ### Changed
+- **AuthConfig** integrated into MACConfig for configuration management
+- **config.example.yaml** updated with auth section and security warnings
+- **All MCP tool handlers** updated with authorization checks
+  - check_agent_authorization() helper for agent identity validation
+  - check_task_ownership() helper for task access control
+  - request_dependency validates agent has actual dependency
+- **README.md** with prominent security notice section
 - Documentation restructured into docs/ directory following Diátaxis framework
   - docs/getting-started/ - Tutorials for beginners
   - docs/guides/ - How-to guides (agent integration, production deployment)
@@ -31,18 +45,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added badges (Python 3.12+, MCP June 2025, MIT License, Alpha status)
   - Added feature grid with icons
   - Added ASCII architecture diagram
-  - Added quick start section and use cases
+  - Added security notice with API key generation examples
 - ROADMAP consolidated as single source of truth for future work
 - Orchestrator and Supervisor now use EventPublisher (~110 lines deduplication)
-- MCP server call_tool() simplified from 157 lines to 15 lines (90% reduction)
+- MCP server call_tool() simplified with auth middleware + handler registry
 
 ### Refactored
 - Extracted EventPublisher utility (eliminated duplication across 11 locations)
 - Extracted MCP tool handlers into registry pattern (reduced complexity by 87%)
 - Each MCP tool now has dedicated handler function for maintainability
+- Authorization logic centralized in helper functions (DRY principle)
 
 ### Removed
 - IMPROVEMENTS_2025.md (historical artifact - content moved to CHANGELOG/ROADMAP)
+
+### Security
+- **Alpha security limitations documented**:
+  - API keys are bearer tokens (no encryption)
+  - No token expiration or rotation
+  - No rate limiting (planned v0.2.0)
+  - No comprehensive audit logging
+  - Config file storage (not secrets manager)
+- **Authorization implemented**:
+  - Agent-scoped permissions (agents can only act on own tasks)
+  - Task ownership validation
+  - Dependency access control
+- **Migration path documented**: API keys (v0.1.0) → OAuth 2.1 (v0.2.0) → Full OAuth 2.1 (v0.3.0)
 
 ### Performance
 - EventPublisher reduces event creation overhead
