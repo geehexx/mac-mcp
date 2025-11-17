@@ -30,9 +30,9 @@ class TestRealLLMIntegration:
 
     @pytest.fixture
     async def bedrock_provider(self) -> BedrockProvider:
-        """Create Bedrock provider."""
+        """Create Bedrock provider with Claude Sonnet 4.5."""
         return BedrockProvider(
-            model="us.anthropic.claude-sonnet-4-20250514-v1:0",
+            model="anthropic.claude-sonnet-4-5-20250929-v1:0",
             region="us-east-1",
         )
 

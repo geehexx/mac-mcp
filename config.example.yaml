@@ -8,7 +8,7 @@ llm:
 
   # Model identifier
   # For Anthropic: claude-sonnet-4-5-20250929, claude-opus-4-20250514, etc.
-  # For Bedrock: anthropic.claude-3-5-sonnet-20241022-v2:0, etc.
+  # For Bedrock: anthropic.claude-sonnet-4-5-20250929-v1:0, etc.
   model: "claude-sonnet-4-5-20250929"
 
   # Anthropic API configuration (only for provider: anthropic)

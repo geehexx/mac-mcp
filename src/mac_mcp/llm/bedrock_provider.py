@@ -19,7 +19,7 @@ class BedrockProvider(LLMProvider):
 
     def __init__(
         self,
-        model: str = "anthropic.claude-3-5-sonnet-20241022-v2:0",
+        model: str = "anthropic.claude-sonnet-4-5-20250929-v1:0",
         region: str = "us-east-1",
         aws_access_key_id: str | None = None,
         aws_secret_access_key: str | None = None,

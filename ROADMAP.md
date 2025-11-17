@@ -12,13 +12,33 @@ See [CHANGELOG.md](CHANGELOG.md) for complete feature list.
 
 ## Next Release (v0.2.0 - Q1 2026)
 
+### LLM Rate Limiting
+**Priority**: Critical | **Effort**: Medium
+
+Production-grade rate limiting for LLM providers:
+- Token bucket algorithm with exponential backoff
+- Request queuing for concurrent goals
+- Per-provider rate limits (Bedrock: 1 req/5s, Anthropic: configurable)
+- Monitoring and alerting for throttling events
+- **Status**: Required before high-volume production use
+
+### Decomposition Caching
+**Priority**: High | **Effort**: Low
+
+Cache LLM decompositions for similar goals:
+- Hash-based lookup (goal description + context)
+- 30-50% reduction in LLM calls
+- Configurable TTL and cache size
+- Cost savings: ~$8-$860/month depending on volume
+
 ### Context Engineering
-**Priority**: Critical | **Effort**: High
+**Priority**: High | **Effort**: High
 
 Dynamic LLM context vs static prompts:
 - Retrieve similar past decompositions (embedding search)
 - Include domain patterns and constraints
 - Reduce hallucination, improve DAG quality
+- Optimize prompts (20-30% token reduction)
 
 ### Event Snapshotting
 **Priority**: High | **Effort**: Medium
@@ -36,6 +56,7 @@ TUI dashboard enhancements:
 - Agent utilization (active/idle/failed)
 - Goal statistics (avg, p95, p99)
 - Error rates, memory usage
+- LLM cost tracking
 
 ---
 
@@ -56,7 +77,9 @@ WebSocket-based vs polling:
 
 ## v0.4.0 - Security (Q2 2026)
 
-### Agent Authentication (JWT)
+### OAuth 2.1 Authentication
+Production-grade authentication:
+- Replace alpha API key auth
 - Short-lived tokens (1hr) with refresh
 - Claims: agent_id, capabilities, issued_at
 - Required for all MCP tool calls
@@ -65,10 +88,11 @@ WebSocket-based vs polling:
 - HMAC-SHA256 signatures
 - Tamper detection on replay
 
-### Rate Limiting
+### Agent Rate Limiting
+Per-agent resource limits:
 - Max concurrent tasks/agent: 5
-- Max API calls: 1000/hr
 - Max failed tasks: 10/hr
+- Prevent resource exhaustion
 
 ### Web Dashboard
 Browser UI with real-time updates:
