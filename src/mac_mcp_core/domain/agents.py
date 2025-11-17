@@ -123,22 +123,28 @@ class Agent(BaseModel):
             return 0.0
         return self.task_history["successful"] / total
 
-    def should_quarantine(self, failure_threshold: int = 3) -> bool:
+    def should_quarantine(
+        self,
+        failure_threshold: int = 3,
+        min_tasks: int = 5,
+        failure_rate_threshold: float = 0.5,
+    ) -> bool:
         """Check if agent should be quarantined.
 
         Args:
-            failure_threshold: Number of recent failures before quarantine
+            failure_threshold: Minimum number of failures to trigger quarantine check
+            min_tasks: Minimum number of tasks before agent can be quarantined
+            failure_rate_threshold: Failure rate above which to quarantine
 
         Returns:
             True if agent should be quarantined
         """
-        # Simple heuristic: quarantine if last N tasks failed
-        # In production, this would check recent failure rate
-        failed = self.task_history["failed"]
+        # Heuristic: quarantine if failure rate is high after minimum task count
         total = self.task_history["total"]
+        failed = self.task_history["failed"]
 
-        if total < failure_threshold:
+        if total < min_tasks or failed < failure_threshold:
             return False
 
-        recent_failures = failed
-        return recent_failures >= failure_threshold
+        failure_rate = failed / total
+        return failure_rate > failure_rate_threshold

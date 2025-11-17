@@ -12,8 +12,8 @@ from typing import Any
 import aiofiles
 from aiofiles import os as aio_os
 
-from mac_mcp.domain.events import Event
-from mac_mcp.storage.base import EventStore, Snapshot
+from mac_mcp_core.domain.events import Event
+from mac_mcp_core.storage.base import EventStore, Snapshot
 
 
 class JSONLEventStore(EventStore):

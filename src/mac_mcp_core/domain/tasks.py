@@ -164,6 +164,23 @@ class Task(BaseModel):
         self.error = error
         self.updated_at = datetime.now(UTC)
 
+    def retry(self) -> None:
+        """Reset task for retry after failure.
+
+        Resets state to PENDING and clears assignment for retry.
+        Caller should increment retry_count in metadata.
+
+        Raises:
+            ValueError: If task is not in ERROR state
+        """
+        if self.state != TaskState.ERROR:
+            msg = f"Cannot retry task in {self.state} state"
+            raise ValueError(msg)
+
+        self.state = TaskState.PENDING
+        self.assigned_agent = None
+        self.updated_at = datetime.now(UTC)
+
     def is_terminal(self) -> bool:
         """Check if task is in a terminal state.
 

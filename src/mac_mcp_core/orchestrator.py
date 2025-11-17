@@ -12,6 +12,7 @@ are injected via abstract interfaces, enabling external optimization
 systems (e.g., DSPy) to provide custom logic.
 """
 
+import asyncio
 from typing import Any
 
 from mac_mcp_core.domain.agents import Agent
@@ -317,8 +318,7 @@ class Orchestrator:
 
         if retryable and retry_count < max_retries:
             action = "retry"
-            task.state = TaskState.PENDING
-            task.assigned_agent = None
+            task.retry()  # Use domain method for encapsulation
             task.metadata["retry_count"] = retry_count + 1
         else:
             action = "fail"
@@ -582,7 +582,11 @@ class Orchestrator:
             # Start execution
             goal.start_execution()
 
-        except Exception as e:
+        except BaseException as e:
+            # Preserve cancellation exceptions to allow graceful shutdown
+            if isinstance(e, asyncio.CancelledError):
+                raise
+
             error_context = {
                 "error_type": type(e).__name__,
                 "goal_id": goal_id,

@@ -456,7 +456,22 @@ def create_server(
         if uri == "coordination://events":
             events = []
             async for event in event_store.read():
-                events.append(event.model_dump_json())
+                event_dict = event.model_dump()
+                # Redact potentially sensitive error payloads
+                if event_dict.get("type") == "task_failed" and isinstance(
+                    event_dict.get("payload"), dict
+                ):
+                    err = event_dict["payload"].get("error")
+                    if isinstance(err, dict):
+                        msg = err.get("message", "")
+                        if isinstance(msg, str) and len(msg) > 200:
+                            err["message"] = msg[:200] + "..."
+                        event_dict["payload"]["error"] = {
+                            "type": err.get("type", "unknown"),
+                            "message": err.get("message", ""),
+                            "retryable": bool(err.get("retryable", False)),
+                        }
+                events.append(json.dumps(event_dict))
             return "\n".join(events)
 
         return f"Unknown resource: {uri}"

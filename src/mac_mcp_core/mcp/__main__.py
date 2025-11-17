@@ -55,11 +55,8 @@ def main() -> None:
     supervisor = AgentSupervisor(event_store)
 
     # Create pluggable components using factory
-    decomposer = None
-    matcher = None
-    scheduler = None
-
     try:
+        decomposer = None
         if config.decomposer.llm:
             decomposer = ComponentFactory.create_decomposer(config.decomposer)
     except Exception as e:
@@ -69,12 +66,14 @@ def main() -> None:
     try:
         matcher = ComponentFactory.create_matcher(config.matcher)
     except Exception as e:
-        print(f"Warning: Could not create matcher, using fallback: {e}", file=sys.stderr)
+        print(f"Critical Error: Could not create agent matcher: {e}", file=sys.stderr)
+        sys.exit(1)
 
     try:
         scheduler = ComponentFactory.create_scheduler(config.scheduler)
     except Exception as e:
-        print(f"Warning: Could not create scheduler, using fallback: {e}", file=sys.stderr)
+        print(f"Critical Error: Could not create task scheduler: {e}", file=sys.stderr)
+        sys.exit(1)
 
     # Create orchestrator with pluggable components
     orchestrator = Orchestrator(

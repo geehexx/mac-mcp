@@ -8,7 +8,7 @@ making the code more maintainable and extensible.
 """
 
 import json
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from typing import Any
 
@@ -19,7 +19,7 @@ from mac_mcp_core.domain.tasks import Task
 
 
 # Type alias for handler functions
-ToolHandler = Callable[[Orchestrator, dict[str, Any]], list[TextContent]]
+ToolHandler = Callable[[Orchestrator, dict[str, Any]], Awaitable[list[TextContent]]]
 
 
 # Authorization helpers

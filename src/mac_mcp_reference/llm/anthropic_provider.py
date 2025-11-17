@@ -68,14 +68,11 @@ class AnthropicProvider(LLMProvider):
             # Extract text from response
             if response.content:
                 return response.content[0].text
-
-        except TimeoutError as e:
-            msg = f"Anthropic API call exceeded timeout of {timeout}s"
-            # Use standard TimeoutError which accepts message, not asyncio.TimeoutError
-            raise TimeoutError(msg) from e
-
-        else:
             return ""
+
+        except asyncio.TimeoutError as e:
+            msg = f"Anthropic API call exceeded timeout of {timeout}s"
+            raise asyncio.TimeoutError(msg) from e
 
     def get_model_name(self) -> str:
         """Get the model identifier.
