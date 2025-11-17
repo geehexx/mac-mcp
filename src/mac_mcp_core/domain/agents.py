@@ -5,7 +5,7 @@ This module defines the Agent entity and related types.
 
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Annotated, Any
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -40,8 +40,8 @@ class Agent(BaseModel):
     capabilities: list[str]
     metadata: dict[str, Any] = Field(default_factory=dict)
     status: AgentStatus = AgentStatus.ACTIVE
-    registered_at: Annotated[datetime, Field(default_factory=lambda: datetime.now(UTC))]
-    last_heartbeat: Annotated[datetime, Field(default_factory=lambda: datetime.now(UTC))]
+    registered_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    last_heartbeat: datetime = Field(default_factory=lambda: datetime.now(UTC))
     current_tasks: list[str] = Field(default_factory=list)
     task_history: dict[str, int] = Field(
         default_factory=lambda: {

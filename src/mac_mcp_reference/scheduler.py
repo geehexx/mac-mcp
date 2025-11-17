@@ -27,13 +27,13 @@ class TopologicalScheduler(AbstractScheduler):
     async def get_ready_tasks(
         self,
         all_tasks: dict[str, Task],
-        context: dict[str, Any] | None = None,
+        _context: dict[str, Any] | None = None,
     ) -> list[Task]:
         """Get tasks ready for assignment in topological order.
 
         Args:
             all_tasks: Dictionary of all tasks
-            context: Additional context (ignored in basic implementation)
+            _context: Additional context (ignored in basic implementation)
 
         Returns:
             Ordered list of tasks ready for assignment

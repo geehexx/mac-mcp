@@ -49,7 +49,6 @@ class AbstractGoalDecomposer(ABC):
             ValueError: If decomposition fails or produces invalid DAG
             TimeoutError: If decomposition exceeds timeout
         """
-        pass
 
     @abstractmethod
     def get_implementation_name(self) -> str:
@@ -58,4 +57,3 @@ class AbstractGoalDecomposer(ABC):
         Returns:
             String identifier (e.g., "simple", "dspy_optimized", "mcp_remote")
         """
-        pass

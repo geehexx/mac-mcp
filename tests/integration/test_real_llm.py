@@ -16,6 +16,7 @@ from mac_mcp.domain.tasks import TaskState
 from mac_mcp.llm.bedrock_provider import BedrockProvider
 from mac_mcp.storage.memory import InMemoryEventStore
 
+
 # Skip if AWS credentials not available
 pytestmark = pytest.mark.skipif(
     not os.environ.get("AWS_ACCESS_KEY_ID"),
@@ -244,7 +245,7 @@ class TestRealLLMIntegration:
         self, orchestrator_with_llm: Orchestrator
     ) -> None:
         """Test and measure decomposition quality."""
-        goal = await orchestrator_with_llm.submit_goal(
+        await orchestrator_with_llm.submit_goal(
             goal_id="test_quality",
             description="Implement a machine learning pipeline for sentiment analysis",
             context={

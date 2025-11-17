@@ -50,7 +50,6 @@ class AbstractAgentMatcher(ABC):
         Raises:
             ValueError: If matching logic encounters an error
         """
-        pass
 
     @abstractmethod
     def get_implementation_name(self) -> str:
@@ -59,4 +58,3 @@ class AbstractAgentMatcher(ABC):
         Returns:
             String identifier (e.g., "basic", "load_balanced", "dspy_optimized")
         """
-        pass

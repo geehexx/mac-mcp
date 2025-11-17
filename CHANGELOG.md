@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Fix Pydantic Field syntax for mypy compatibility (removed Annotated wrapper, use Field as default value)
+- Fix imports in mac_mcp_core/storage to reference mac_mcp_core instead of legacy mac_mcp package
+- Fix datetime.now() to use UTC timezone in dashboard
+- Fix loop variable overwrite in JSONL event store (PLW2901)
+- Fix unused import warnings (TaskDAG added to __all__)
+- Add Pydantic mypy plugin for proper type checking
+- Auto-fix 63 linting errors (import sorting, whitespace, unnecessary pass statements)
+- Add noqa comments for intentional patterns (lazy imports in entry points, stylistic choices)
+- Prefix unused method arguments with underscore (matcher/scheduler context parameters)
+
 ### Security
 - Fix authorization bypass in claim_task: now uses registered agent capabilities instead of caller-provided
 - Add PII redaction for error objects to prevent sensitive data leakage in event logs

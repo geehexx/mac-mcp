@@ -5,7 +5,7 @@ This module defines the Goal entity and its lifecycle.
 
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Annotated, Any
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -48,8 +48,8 @@ class Goal(BaseModel):
     state: GoalState = GoalState.SUBMITTED
     context: dict[str, Any] = Field(default_factory=dict)
     constraints: dict[str, Any] = Field(default_factory=dict)
-    submitted_at: Annotated[datetime, Field(default_factory=lambda: datetime.now(UTC))]
-    updated_at: Annotated[datetime, Field(default_factory=lambda: datetime.now(UTC))]
+    submitted_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     task_ids: list[str] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
     result: dict[str, Any] | None = None

@@ -81,10 +81,7 @@ class Event(BaseModel):
     @classmethod
     def ensure_utc(cls, v: datetime | str) -> datetime:
         """Ensure timestamp is in UTC."""
-        if isinstance(v, str):
-            dt = datetime.fromisoformat(v.replace("Z", "+00:00"))
-        else:
-            dt = v
+        dt = datetime.fromisoformat(v.replace("Z", "+00:00")) if isinstance(v, str) else v
 
         if dt.tzinfo is None:
             return dt.replace(tzinfo=UTC)

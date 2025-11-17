@@ -4,7 +4,14 @@ This module provides a factory pattern for instantiating the correct
 implementation based on configuration.
 """
 
-from mac_mcp_core.config import DecomposerConfig, DecomposerType, MatcherConfig, MatcherType, SchedulerConfig, SchedulerType
+from mac_mcp_core.config import (
+    DecomposerConfig,
+    DecomposerType,
+    MatcherConfig,
+    MatcherType,
+    SchedulerConfig,
+    SchedulerType,
+)
 from mac_mcp_core.interfaces.decomposer import AbstractGoalDecomposer
 from mac_mcp_core.interfaces.matcher import AbstractAgentMatcher
 from mac_mcp_core.interfaces.scheduler import AbstractScheduler
@@ -47,24 +54,23 @@ class ComponentFactory:
                 temperature=config.llm.temperature,
             )
 
-        elif config.type == DecomposerType.TEMPLATE:
+        if config.type == DecomposerType.TEMPLATE:
             # Placeholder for template-based decomposer
             msg = "Template decomposer not yet implemented"
             raise NotImplementedError(msg)
 
-        elif config.type == DecomposerType.DSPY:
+        if config.type == DecomposerType.DSPY:
             # Placeholder for DSPy-optimized decomposer
             msg = "DSPy decomposer not yet implemented. See ROADMAP.md for implementation guide."
             raise NotImplementedError(msg)
 
-        elif config.type == DecomposerType.MCP_REMOTE:
+        if config.type == DecomposerType.MCP_REMOTE:
             # Placeholder for MCP remote decomposer
             msg = "MCP remote decomposer not yet implemented. See ROADMAP.md for implementation guide."
             raise NotImplementedError(msg)
 
-        else:
-            msg = f"Unknown decomposer type: {config.type}"
-            raise ValueError(msg)
+        msg = f"Unknown decomposer type: {config.type}"
+        raise ValueError(msg)
 
     @staticmethod
     def create_matcher(config: MatcherConfig) -> AbstractAgentMatcher:
@@ -82,21 +88,20 @@ class ComponentFactory:
         if config.type == MatcherType.BASIC:
             return BasicMatcher(max_concurrent_tasks=config.max_concurrent_tasks)
 
-        elif config.type == MatcherType.LOAD_BALANCED:
+        if config.type == MatcherType.LOAD_BALANCED:
             msg = "Load balanced matcher not yet implemented"
             raise NotImplementedError(msg)
 
-        elif config.type == MatcherType.DSPY:
+        if config.type == MatcherType.DSPY:
             msg = "DSPy matcher not yet implemented. See ROADMAP.md for implementation guide."
             raise NotImplementedError(msg)
 
-        elif config.type == MatcherType.MCP_REMOTE:
+        if config.type == MatcherType.MCP_REMOTE:
             msg = "MCP remote matcher not yet implemented. See ROADMAP.md for implementation guide."
             raise NotImplementedError(msg)
 
-        else:
-            msg = f"Unknown matcher type: {config.type}"
-            raise ValueError(msg)
+        msg = f"Unknown matcher type: {config.type}"
+        raise ValueError(msg)
 
     @staticmethod
     def create_scheduler(config: SchedulerConfig) -> AbstractScheduler:
@@ -114,22 +119,21 @@ class ComponentFactory:
         if config.type == SchedulerType.TOPOLOGICAL:
             return TopologicalScheduler()
 
-        elif config.type == SchedulerType.PRIORITY:
+        if config.type == SchedulerType.PRIORITY:
             msg = "Priority scheduler not yet implemented"
             raise NotImplementedError(msg)
 
-        elif config.type == SchedulerType.DEADLINE:
+        if config.type == SchedulerType.DEADLINE:
             msg = "Deadline scheduler not yet implemented"
             raise NotImplementedError(msg)
 
-        elif config.type == SchedulerType.DSPY:
+        if config.type == SchedulerType.DSPY:
             msg = "DSPy scheduler not yet implemented. See ROADMAP.md for implementation guide."
             raise NotImplementedError(msg)
 
-        elif config.type == SchedulerType.MCP_REMOTE:
+        if config.type == SchedulerType.MCP_REMOTE:
             msg = "MCP remote scheduler not yet implemented. See ROADMAP.md for implementation guide."
             raise NotImplementedError(msg)
 
-        else:
-            msg = f"Unknown scheduler type: {config.type}"
-            raise ValueError(msg)
+        msg = f"Unknown scheduler type: {config.type}"
+        raise ValueError(msg)

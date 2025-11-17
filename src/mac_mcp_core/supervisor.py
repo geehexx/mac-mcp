@@ -5,13 +5,14 @@ monitoring agent health via heartbeats and recovering from failures.
 """
 
 import asyncio
+import contextlib
 from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any
 
-from mac_mcp_core.event_publisher import EventPublisher
 from mac_mcp_core.domain.agents import Agent, AgentStatus
 from mac_mcp_core.domain.events import AgentFailedEvent, AgentHeartbeatEvent, AgentRegisteredEvent
+from mac_mcp_core.event_publisher import EventPublisher
 from mac_mcp_core.storage.base import EventStore
 
 
@@ -255,10 +256,8 @@ class AgentSupervisor:
         self._shutdown = True
         if self._monitoring_task:
             self._monitoring_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._monitoring_task
-            except asyncio.CancelledError:
-                pass
             self._monitoring_task = None
 
     def get_all_agents(self) -> list[Agent]:

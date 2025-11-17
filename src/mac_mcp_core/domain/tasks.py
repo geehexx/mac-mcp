@@ -5,7 +5,7 @@ This module defines the Task entity and its state machine.
 
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Annotated, Any
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -52,9 +52,9 @@ class Task(BaseModel):
     description: str
     state: TaskState = TaskState.PENDING
     assigned_agent: str | None = None
-    created_at: Annotated[datetime, Field(default_factory=lambda: datetime.now(UTC))]
-    updated_at: Annotated[datetime, Field(default_factory=lambda: datetime.now(UTC))]
-    progress: Annotated[float, Field(ge=0.0, le=1.0)] = 0.0
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    progress: float = Field(default=0.0, ge=0.0, le=1.0)
     dependencies: list[str] = Field(default_factory=list)
     required_capabilities: list[str] = Field(default_factory=list)
     result: dict[str, Any] | None = None
@@ -236,10 +236,9 @@ class TaskDAG(BaseModel):
             return False
 
         for task in self.tasks:
-            if task.id not in visited:
-                if has_cycle(task.id):
-                    msg = "Task DAG contains a cycle"
-                    raise ValueError(msg)
+            if task.id not in visited and has_cycle(task.id):
+                msg = "Task DAG contains a cycle"
+                raise ValueError(msg)
 
         return True
 

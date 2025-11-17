@@ -93,7 +93,7 @@ class SimpleDecomposer(AbstractGoalDecomposer):
 
                 if not content or len(content.strip()) < 10:
                     msg = f"LLM returned empty response (length: {len(content)})"
-                    raise ValueError(msg)
+                    raise ValueError(msg)  # noqa: TRY301
 
                 result = self._parse_response(content)
                 self._validate_decomposition_result(result)
@@ -254,7 +254,7 @@ Respond with ONLY the JSON object."""
             caps = task_data.get("required_capabilities", [])
             if not isinstance(caps, list):
                 msg = f"Task {task_id} capabilities must be a list"
-                raise ValueError(msg)
+                raise ValueError(msg)  # noqa: TRY004
 
         # Validate dependencies reference existing tasks
         for task_data in result.tasks:

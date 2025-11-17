@@ -219,10 +219,9 @@ class TaskDAG(BaseModel):
             return False
 
         for task in self.tasks:
-            if task.id not in visited:
-                if has_cycle(task.id):
-                    msg = "Task DAG contains a cycle"
-                    raise ValueError(msg)
+            if task.id not in visited and has_cycle(task.id):
+                msg = "Task DAG contains a cycle"
+                raise ValueError(msg)
 
         return True
 

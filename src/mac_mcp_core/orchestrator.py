@@ -15,7 +15,6 @@ systems (e.g., DSPy) to provide custom logic.
 import asyncio
 from typing import Any
 
-from mac_mcp_core.domain.agents import Agent
 from mac_mcp_core.domain.events import (
     Event,
     EventType,

@@ -20,19 +20,20 @@ def main() -> None:
     - AWS_REGION: AWS region for Bedrock (default: us-east-1)
     - ANTHROPIC_API_KEY: API key for Anthropic provider (legacy, use MAC_MCP_DECOMPOSER__LLM__API_KEY)
     """
-    from mac_mcp_core.config import OrchestratorConfig, DecomposerConfig, LLMConfig
-    from mac_mcp_core.orchestrator import Orchestrator
-    from mac_mcp_core.supervisor import AgentSupervisor
-    from mac_mcp_core.mcp.server import run_stdio_server
-    from mac_mcp_reference.factory import ComponentFactory
+    # Lazy imports for entry point - allows server to start without all dependencies
+    from mac_mcp_core.config import LLMConfig, OrchestratorConfig  # noqa: PLC0415
+    from mac_mcp_core.mcp.server import run_stdio_server  # noqa: PLC0415
+    from mac_mcp_core.orchestrator import Orchestrator  # noqa: PLC0415
+    from mac_mcp_core.supervisor import AgentSupervisor  # noqa: PLC0415
+    from mac_mcp_reference.factory import ComponentFactory  # noqa: PLC0415
 
     # Storage setup
     storage_path = os.getenv("MAC_STORAGE_PATH")
     if storage_path:
-        from mac_mcp_core.storage.jsonl import JSONLEventStore
+        from mac_mcp_core.storage.jsonl import JSONLEventStore  # noqa: PLC0415
         event_store = JSONLEventStore(Path(storage_path))
     else:
-        from mac_mcp_core.storage.memory import InMemoryEventStore
+        from mac_mcp_core.storage.memory import InMemoryEventStore  # noqa: PLC0415
         event_store = InMemoryEventStore()
 
     # Load configuration from environment

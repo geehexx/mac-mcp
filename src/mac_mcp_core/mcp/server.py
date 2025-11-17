@@ -12,8 +12,8 @@ from mcp.server.stdio import stdio_server
 from mcp.types import Resource, TextContent, Tool
 
 from mac_mcp_core.auth import APIKeyAuth, AuthConfig
-from mac_mcp_core.orchestrator import Orchestrator
 from mac_mcp_core.mcp.handlers import get_handler
+from mac_mcp_core.orchestrator import Orchestrator
 from mac_mcp_core.storage.base import EventStore
 
 
@@ -490,8 +490,9 @@ async def run_stdio_server(
         orchestrator: Optional orchestrator instance
     """
     if orchestrator is None:
-        from mac_mcp_core.orchestrator import Orchestrator
-        from mac_mcp_core.supervisor import AgentSupervisor
+        # Lazy imports to avoid circular dependencies
+        from mac_mcp_core.orchestrator import Orchestrator  # noqa: PLC0415
+        from mac_mcp_core.supervisor import AgentSupervisor  # noqa: PLC0415
 
         supervisor = AgentSupervisor(event_store)
         orchestrator = Orchestrator(event_store, supervisor)

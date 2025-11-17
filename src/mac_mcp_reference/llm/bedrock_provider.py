@@ -100,11 +100,11 @@ class BedrockProvider(LLMProvider):
             # Extract text from response
             if response_body.get("content"):
                 return response_body["content"][0]["text"]
-            return ""
+            return ""  # noqa: TRY300
 
-        except asyncio.TimeoutError as e:
+        except TimeoutError as e:
             msg = f"AWS Bedrock API call exceeded timeout of {timeout}s"
-            raise asyncio.TimeoutError(msg) from e
+            raise TimeoutError(msg) from e
 
     def get_model_name(self) -> str:
         """Get the model identifier.

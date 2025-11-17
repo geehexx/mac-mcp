@@ -258,13 +258,13 @@ class TestGoalWorkflowIntegration:
         orchestrator = Orchestrator(store, supervisor, decomposer=decomposer)
 
         # Register agents with different capabilities
-        agent1 = await supervisor.register_agent(
+        await supervisor.register_agent(
             agent_id="research_agent", capabilities=["research", "design"]
         )
-        agent2 = await supervisor.register_agent(
+        await supervisor.register_agent(
             agent_id="coding_agent", capabilities=["python", "coding"]
         )
-        agent3 = await supervisor.register_agent(
+        await supervisor.register_agent(
             agent_id="testing_agent", capabilities=["testing", "python"]
         )
 

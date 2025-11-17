@@ -146,8 +146,8 @@ class JSONLEventStore(EventStore):
 
         count = 0
         async with aiofiles.open(self.events_path, encoding="utf-8") as f:
-            async for line in f:
-                line = line.strip()
+            async for raw_line in f:
+                line = raw_line.strip()
                 if not line:
                     continue
 

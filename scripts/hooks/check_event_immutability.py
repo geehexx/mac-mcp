@@ -25,7 +25,7 @@ class EventImmutabilityChecker(ast.NodeVisitor):
                         if isinstance(target, ast.Name) and target.id == "model_config":
                             # Check if frozen=True in dict
                             if isinstance(item.value, ast.Dict):
-                                for key, value in zip(item.value.keys, item.value.values):
+                                for key, value in zip(item.value.keys, item.value.values, strict=False):
                                     if (
                                         isinstance(key, ast.Constant)
                                         and key.value == "frozen"

@@ -38,14 +38,14 @@ class BasicMatcher(AbstractAgentMatcher):
         self,
         task: Task,
         available_agents: list[Agent],
-        context: dict[str, Any] | None = None,
+        _context: dict[str, Any] | None = None,
     ) -> str | None:
         """Select the best agent for a task using capability matching.
 
         Args:
             task: Task requiring assignment
             available_agents: List of available agents
-            context: Additional context (ignored in basic implementation)
+            _context: Additional context (ignored in basic implementation)
 
         Returns:
             Agent ID of selected agent, or None if no suitable agent found

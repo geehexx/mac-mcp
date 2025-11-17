@@ -1,8 +1,8 @@
 """Storage implementations for event sourcing."""
 
-from mac_mcp.storage.base import EventStore, Snapshot
-from mac_mcp.storage.jsonl import JSONLEventStore
-from mac_mcp.storage.memory import InMemoryEventStore
+from mac_mcp_core.storage.base import EventStore, Snapshot
+from mac_mcp_core.storage.jsonl import JSONLEventStore
+from mac_mcp_core.storage.memory import InMemoryEventStore
 
 
 __all__ = [

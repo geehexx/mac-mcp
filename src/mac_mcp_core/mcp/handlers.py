@@ -14,8 +14,8 @@ from typing import Any
 
 from mcp.types import TextContent
 
-from mac_mcp_core.orchestrator import Orchestrator
 from mac_mcp_core.domain.tasks import Task
+from mac_mcp_core.orchestrator import Orchestrator
 
 
 # Type alias for handler functions

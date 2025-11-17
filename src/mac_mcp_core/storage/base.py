@@ -7,7 +7,7 @@ from typing import Any, Protocol
 
 from pydantic import BaseModel, Field
 
-from mac_mcp.domain.events import Event
+from mac_mcp_core.domain.events import Event
 
 
 class Snapshot(BaseModel):

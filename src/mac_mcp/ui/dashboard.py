@@ -112,7 +112,7 @@ class Dashboard:
         grid.add_row(
             "[bold cyan]Multi-Agent Coordination Server[/]",
             "[bold]MAC MCP Dashboard[/]",
-            f"[dim]{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}[/]",
+            f"[dim]{datetime.now(UTC).strftime('%Y-%m-%d %H:%M:%S')}[/]",
         )
 
         return Panel(grid, style="bold white on blue")

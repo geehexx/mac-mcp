@@ -6,7 +6,7 @@ Events are immutable records of state changes in the system.
 
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Annotated, Any, Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -64,8 +64,8 @@ class Event(BaseModel):
 
     type: EventType
     schema_version: int = 1  # For future event migrations
-    timestamp: Annotated[datetime, Field(default_factory=lambda: datetime.now(UTC))]
-    sequence: Annotated[int, Field(ge=0)]
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    sequence: int = Field(ge=0)
     task_id: str | None = None
     agent_id: str | None = None
     goal_id: str | None = None
@@ -81,10 +81,7 @@ class Event(BaseModel):
     @classmethod
     def ensure_utc(cls, v: datetime | str) -> datetime:
         """Ensure timestamp is in UTC."""
-        if isinstance(v, str):
-            dt = datetime.fromisoformat(v.replace("Z", "+00:00"))
-        else:
-            dt = v
+        dt = datetime.fromisoformat(v.replace("Z", "+00:00")) if isinstance(v, str) else v
 
         if dt.tzinfo is None:
             return dt.replace(tzinfo=UTC)

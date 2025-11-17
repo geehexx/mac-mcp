@@ -7,8 +7,8 @@ Events are stored in memory and are lost when the process exits.
 from collections.abc import AsyncIterator
 from typing import Any
 
-from mac_mcp.domain.events import Event
-from mac_mcp.storage.base import EventStore, Snapshot
+from mac_mcp_core.domain.events import Event
+from mac_mcp_core.storage.base import EventStore, Snapshot
 
 
 class InMemoryEventStore(EventStore):

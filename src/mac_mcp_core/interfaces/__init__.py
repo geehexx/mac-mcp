@@ -9,8 +9,9 @@ from mac_mcp_core.interfaces.decomposer import AbstractGoalDecomposer
 from mac_mcp_core.interfaces.matcher import AbstractAgentMatcher
 from mac_mcp_core.interfaces.scheduler import AbstractScheduler
 
+
 __all__ = [
-    "AbstractGoalDecomposer",
     "AbstractAgentMatcher",
+    "AbstractGoalDecomposer",
     "AbstractScheduler",
 ]

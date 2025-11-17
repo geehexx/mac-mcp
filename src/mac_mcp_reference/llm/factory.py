@@ -30,11 +30,10 @@ def create_llm_provider(config: LLMConfig) -> LLMProvider:
             model=config.model,
         )
 
-    elif provider == "bedrock":
+    if provider == "bedrock":
         return BedrockProvider(
             model=config.model,
         )
 
-    else:
-        msg = f"Unsupported LLM provider: {config.provider}"
-        raise ValueError(msg)
+    msg = f"Unsupported LLM provider: {config.provider}"
+    raise ValueError(msg)

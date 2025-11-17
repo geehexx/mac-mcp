@@ -49,7 +49,6 @@ class AbstractScheduler(ABC):
         Raises:
             ValueError: If scheduling logic encounters an error
         """
-        pass
 
     @abstractmethod
     def get_implementation_name(self) -> str:
@@ -58,4 +57,3 @@ class AbstractScheduler(ABC):
         Returns:
             String identifier (e.g., "topological", "priority", "dspy_optimized")
         """
-        pass

@@ -127,7 +127,7 @@ class SimpleAgent:
                 logger.debug(f"💓 Heartbeat sent (status={status}, load={load:.1%})")
 
             except Exception as e:
-                logger.error(f"⚠️  Heartbeat failed: {e}")
+                logger.exception(f"⚠️  Heartbeat failed: {e}")
 
             # Sleep for 30 seconds before next heartbeat
             await asyncio.sleep(30)
@@ -189,7 +189,7 @@ class SimpleAgent:
             logger.info(f"✅ Task {task_id} completed successfully")
 
         except Exception as e:
-            logger.error(f"❌ Task {task_id} failed: {e}")
+            logger.exception(f"❌ Task {task_id} failed: {e}")
             await self.fail_task(task_id, e)
 
         finally:
@@ -267,7 +267,7 @@ class SimpleAgent:
             error: Exception that caused failure
         """
         # Determine if error is retryable
-        retryable = not isinstance(error, (ValueError, TypeError))  # Example logic
+        not isinstance(error, (ValueError, TypeError))  # Example logic
 
         # Pseudocode MCP tool call
         # await self.mcp.call_tool(
@@ -322,7 +322,7 @@ class SimpleAgent:
             self.running = False
 
         except Exception as e:
-            logger.error(f"❌ Fatal error: {e}")
+            logger.exception(f"❌ Fatal error: {e}")
             raise
 
 

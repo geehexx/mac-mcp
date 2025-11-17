@@ -14,5 +14,6 @@ __all__ = [
     "Goal",
     "GoalState",
     "Task",
+    "TaskDAG",
     "TaskState",
 ]

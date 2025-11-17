@@ -8,7 +8,7 @@ from pathlib import Path
 
 def main() -> None:
     """Run MCP server with stdio transport.
-    
+
     Environment variables:
     - MAC_STORAGE_PATH: path to JSONL event store (default: in-memory)
     - MAC_LLM_PROVIDER: llm provider (bedrock or anthropic, default: bedrock)
@@ -29,25 +29,25 @@ def main() -> None:
     else:
         from mac_mcp.storage.memory import InMemoryEventStore
         event_store = InMemoryEventStore()
-    
+
     supervisor = AgentSupervisor(event_store)
-    
+
     # Try to create LLM provider if credentials available
     decomposer = None
     provider = os.getenv("MAC_LLM_PROVIDER", "bedrock")
-    
+
     try:
         if provider == "bedrock" and (os.getenv("AWS_ACCESS_KEY_ID") or os.getenv("AWS_PROFILE")):
             from mac_mcp.llm.bedrock_provider import BedrockProvider
-            
+
             model = os.getenv("MAC_LLM_MODEL", "anthropic.claude-sonnet-4-5-20250929-v1:0")
             region = os.getenv("AWS_REGION", "us-east-1")
             llm = BedrockProvider(model=model, region=region)
             decomposer = GoalDecomposer(llm_provider=llm, temperature=0.3)
-            
+
         elif provider == "anthropic" and os.getenv("ANTHROPIC_API_KEY"):
             from mac_mcp.llm.anthropic_provider import AnthropicProvider
-            
+
             api_key = os.getenv("ANTHROPIC_API_KEY")
             model = os.getenv("MAC_LLM_MODEL", "claude-sonnet-4-5-20250929")
             llm = AnthropicProvider(api_key=api_key, model=model)
@@ -55,9 +55,9 @@ def main() -> None:
     except Exception:
         # LLM not available, submit_goal will fail but other tools work
         pass
-    
+
     orchestrator = Orchestrator(event_store, supervisor, decomposer=decomposer)
-    
+
     try:
         asyncio.run(run_stdio_server(event_store, orchestrator))
     except KeyboardInterrupt:

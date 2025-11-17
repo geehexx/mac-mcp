@@ -63,7 +63,7 @@ async def run_with_tui(
     dashboard_task = asyncio.create_task(dashboard.run())
 
     # Wait for either to complete (dashboard will complete on Ctrl+C)
-    done, pending = await asyncio.wait(
+    _done, pending = await asyncio.wait(
         [server_task, dashboard_task],
         return_when=asyncio.FIRST_COMPLETED,
     )
