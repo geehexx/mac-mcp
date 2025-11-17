@@ -9,9 +9,9 @@
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Status](https://img.shields.io/badge/status-alpha-orange)
 
-*Event-sourced orchestration for autonomous LLM agent collaboration*
+*Modular, event-sourced orchestration backbone with pluggable AI optimization*
 
-[Quick Start](#-quick-start) • [Documentation](docs/) • [Examples](examples/) • [Roadmap](ROADMAP.md)
+[Quick Start](#-quick-start) • [Architecture](#-architecture) • [Documentation](docs/) • [Examples](examples/) • [Roadmap](ROADMAP.md)
 
 </div>
 
@@ -23,10 +23,10 @@
 <tr>
 <td width="50%">
 
-### 🎯 Autonomous Coordination
-- **LLM-powered goal decomposition** into executable task DAGs
-- **Dependency-aware scheduling** with automatic topological sorting
-- **Capability-based task matching** to specialized agents
+### 🎯 Pluggable Orchestration
+- **Modular goal decomposition** - swap LLM, DSPy, or custom strategies
+- **Configurable agent matching** - from simple to AI-optimized selection
+- **Flexible task scheduling** - topological, priority, or learned policies
 
 </td>
 <td width="50%">
@@ -50,9 +50,9 @@
 <td>
 
 ### 🛡️ Production Ready
-- **MCP June 2025 compliant** with typed outputSchema
-- **Multi-provider LLM** (Anthropic, AWS Bedrock)
-- **Real-time TUI dashboard** for monitoring
+- **Core/Plugin architecture** - event sourcing core + reference implementations
+- **MCP-extensible** - integrate DSPy or external optimization via MCP
+- **Multi-provider LLM** (Anthropic, AWS Bedrock) • **TUI dashboard**
 
 </td>
 </tr>
@@ -62,42 +62,58 @@
 
 ## 🏗 Architecture
 
+### Core / Plugin / MCP Extension Model
+
 ```
-┌─────────────┐
-│   Claude    │ ← MCP Client (stdio, SSE, or HTTP transport)
-│  (any LLM)  │
-└──────┬──────┘
-       │
-       │ MCP Protocol (8 tools)
-       │
-┌──────▼────────────────────────────────────────────────┐
-│              MAC MCP Server                           │
-│  ┌────────────────────────────────────────────────┐   │
-│  │           Orchestrator (Coordinator)           │   │
-│  │  • Goal decomposition (LLM-powered)            │   │
-│  │  • Task DAG management                         │   │
-│  │  • Dependency resolution                       │   │
-│  │  • Event sourcing (JSONL append-only log)      │   │
-│  └────────────────────────────────────────────────┘   │
-│                                                        │
-│  ┌────────────────────────────────────────────────┐   │
-│  │           Supervisor (Agent Manager)           │   │
-│  │  • Agent registration & capabilities           │   │
-│  │  • Heartbeat monitoring (90s timeout)          │   │
-│  │  • Health status tracking                      │   │
-│  └────────────────────────────────────────────────┘   │
-└────────────────────────────────────────────────────────┘
-       │
-       │ MCP Tool Calls (claim_task, complete_task, etc.)
-       │
-┌──────┴──────┬──────────┬──────────┬──────────┐
-│  Agent 1    │ Agent 2  │ Agent 3  │ Agent N  │
-│  (Python)   │ (Testing)│  (Docs)  │  (...)   │
-│             │          │          │          │
-│ Capabilities│ pytest   │ markdown │ Custom   │
-│ python, api │ coverage │ diagrams │ skills   │
-└─────────────┴──────────┴──────────┴──────────┘
+┌──────────────────────────────────────────────────────────────┐
+│                    mac_mcp_core                              │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  Event Sourcing Engine (Protocol-Agnostic Backbone)   │  │
+│  │  • Events, Storage, Audit Trail                       │  │
+│  │  • Agent Management, Heartbeat, State                 │  │
+│  │  • MCP Protocol Handlers                              │  │
+│  │  • Abstract Interfaces (ABCs):                        │  │
+│  │    - AbstractGoalDecomposer                           │  │
+│  │    - AbstractAgentMatcher                             │  │
+│  │    - AbstractScheduler                                │  │
+│  └────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────┘
+                            ▲
+                            │ depends on
+                            │
+┌──────────────────────────────────────────────────────────────┐
+│                  mac_mcp_reference                           │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  Reference Implementations (Out-of-the-Box)           │  │
+│  │  • SimpleDecomposer (LLM-based)                       │  │
+│  │  • BasicMatcher (capability-based)                    │  │
+│  │  • TopologicalScheduler (dependency-ordered)          │  │
+│  │  • ComponentFactory (DI container)                    │  │
+│  └────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────┘
+
+                            ▲
+                            │ can be replaced by
+                            │
+┌──────────────────────────────────────────────────────────────┐
+│            External MCP Optimization (Future)                │
+│  ┌────────────────────────────────────────────────────────┐  │
+│  │  DSPy-Optimized Flows (Self-Improving via MCP)        │  │
+│  │  • POST coordination://decomposers/dspy_optimized     │  │
+│  │  • Learned decomposition patterns                     │  │
+│  │  • Adaptive agent matching                            │  │
+│  │  • Cost-optimized scheduling                          │  │
+│  └────────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────────┘
 ```
+
+### Key Design Principles
+
+1. **Separation of Concerns**: Core event sourcing is decoupled from orchestration intelligence
+2. **Pluggable Strategies**: Decomposition, matching, and scheduling are injected via abstract interfaces
+3. **MCP-First**: External systems can provide optimized implementations via Model Context Protocol
+4. **Event Sourcing**: Complete audit trail enables debugging, replay, and time-travel
+5. **Pull-Based**: Agents claim tasks (prevent overload) rather than push assignment
 
 ---
 
