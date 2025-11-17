@@ -412,7 +412,12 @@ def create_server(
 
     @server.read_resource()
     async def read_resource(uri: str) -> str:
-        """Read a resource."""
+        """Read a resource.
+
+        TODO(security): Add authentication guard - resources should require valid API key
+        and filter results by agent_id (principle of least privilege).
+        See: https://github.com/geehexx/mac-mcp/pull/2#discussion_r...
+        """
         if uri == "coordination://tasks":
             tasks = [
                 {

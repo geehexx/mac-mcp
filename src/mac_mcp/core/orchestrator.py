@@ -28,6 +28,22 @@ from mac_mcp.domain.tasks import Task, TaskDAG, TaskState
 from mac_mcp.storage.base import EventStore
 
 
+def _sanitize_error(error: dict[str, Any]) -> dict[str, Any]:
+    """Sanitize error dict to remove PII before logging.
+
+    Args:
+        error: Raw error dictionary
+
+    Returns:
+        Sanitized error dictionary safe for logging
+    """
+    return {
+        "type": error.get("type", "unknown"),
+        "message": (error.get("message", "")[:200] + "...") if len(error.get("message", "")) > 200 else error.get("message", ""),
+        "retryable": error.get("retryable", False),
+    }
+
+
 class Orchestrator:
     """Main orchestrator for multi-agent coordination.
 
@@ -292,7 +308,7 @@ class Orchestrator:
             task_id=task_id,
             agent_id=agent_id,
             payload={
-                "error": error,
+                "error": _sanitize_error(error),  # Sanitize to prevent PII leakage
                 "retry_count": retry_count + 1,
             },
         )
@@ -337,7 +353,7 @@ class Orchestrator:
     async def claim_task(
         self,
         agent_id: str,
-        capabilities: list[str],
+        capabilities: list[str],  # noqa: ARG002 - kept for API compatibility
     ) -> Task | None:
         """Claim a task for an agent (pull-based assignment).
 
@@ -352,9 +368,15 @@ class Orchestrator:
         if agent is None or not agent.can_accept_task():
             return None
 
+        # SECURITY: Use registered agent capabilities, not caller-provided
+        # This prevents authorization bypass where malicious agents lie about capabilities
+        agent_capabilities = set(agent.capabilities)
+
         ready_tasks = self.get_ready_tasks()
         for task in ready_tasks:
-            if not any(cap in capabilities for cap in task.required_capabilities):
+            required_caps = set(task.required_capabilities)
+            # Agent must have ALL required capabilities
+            if not required_caps.issubset(agent_capabilities):
                 continue
 
             await self.assign_task(task.id, agent_id)
@@ -391,14 +413,13 @@ class Orchestrator:
             raise ValueError(msg)
 
         # Call decomposer without persisting
-        task_dag = await self.decomposer.decompose(
+        return await self.decomposer.decompose(
             goal_id=goal_id,
             description=description,
             context=context or {},
             constraints=constraints or {},
         )
 
-        return task_dag
 
     async def submit_goal(
         self,
@@ -533,9 +554,14 @@ class Orchestrator:
             return created_tasks
 
         except Exception as e:
-            # Mark goal as failed
-            goal.fail(str(e))
-            raise
+            # Mark goal as failed with structured error context
+            error_context = {
+                "error_type": type(e).__name__,
+                "goal_id": goal_id,
+            }
+            goal.fail(f"{type(e).__name__}: {str(e)[:200]}")
+            msg = f"Goal decomposition failed: {error_context}"
+            raise RuntimeError(msg) from e
 
     def get_goal(self, goal_id: str) -> Goal | None:
         """Get goal by ID.

@@ -383,13 +383,28 @@ async def handle_request_dependency(
     # Authorization check 2: Verify agent has a task that depends on this
     agent_tasks = [t for t in orchestrator._tasks.values() if t.assigned_agent == agent_id]
 
-    has_dependency = any(dependency_task_id in task.dependencies for task in agent_tasks)
+    # Find the dependent task and verify it belongs to same goal (prevent cross-goal leakage)
+    dependent_task = None
+    for task in agent_tasks:
+        if dependency_task_id in task.dependencies:
+            dependent_task = task
+            break
 
-    if not has_dependency:
+    if not dependent_task:
         return [
             TextContent(
                 type="text",
                 text=f"❌ Authorization error: You don't have any tasks that depend on '{dependency_task_id}'.",
+            )
+        ]
+
+    # Verify dependency task exists and belongs to same goal
+    dependency_task = orchestrator.get_task(dependency_task_id)
+    if dependency_task and dependency_task.goal_id != dependent_task.goal_id:
+        return [
+            TextContent(
+                type="text",
+                text="❌ Authorization error: Cross-goal dependency access denied.",
             )
         ]
 
