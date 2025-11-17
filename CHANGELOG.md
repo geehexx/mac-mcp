@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- Fix authorization bypass in claim_task: now uses registered agent capabilities instead of caller-provided
+- Add PII redaction for error objects to prevent sensitive data leakage in event logs
+- Strengthen request_dependency authorization with same-goal verification to prevent cross-goal data access
+- Add structured error handling with context in goal decomposition
+- Add actor_id field to Event model for audit trail compliance (optional for backward compatibility)
+- Document resource endpoint authentication limitations and v0.2.0 security roadmap (event signing, rate limiting)
+
+### Changed
+- Improve try-except-else patterns for better error handling (TRY300 compliance)
+- Replace ambiguous Unicode characters with ASCII equivalents (RUF001 compliance)
+
 ### Added
 - **Domain Models**: Event-sourced domain models (Goal, Task, Agent, Event)
 - **Event Sourcing**: 18 event types with immutable frozen models

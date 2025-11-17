@@ -54,7 +54,12 @@ class Event(BaseModel):
         task_id: Related task (if applicable)
         agent_id: Related agent (if applicable)
         goal_id: Related goal (if applicable)
+        actor_id: Actor who triggered the event (for audit trail)
         payload: Type-specific event data
+
+    Note:
+        actor_id is optional for backward compatibility with schema_version=1 events.
+        New events (schema_version=2+) should always include actor_id for audit compliance.
     """
 
     type: EventType
@@ -64,6 +69,7 @@ class Event(BaseModel):
     task_id: str | None = None
     agent_id: str | None = None
     goal_id: str | None = None
+    actor_id: str | None = None  # Actor who triggered event (audit trail)
     payload: dict[str, Any] = Field(default_factory=dict)
 
     model_config = {

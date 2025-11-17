@@ -198,7 +198,7 @@ async def handle_claim_task(
         return [
             TextContent(
                 type="text",
-                text="ℹ️ No matching tasks available",
+                text="[i] No matching tasks available",
             )
         ]
 

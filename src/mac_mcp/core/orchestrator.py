@@ -551,8 +551,6 @@ class Orchestrator:
             # Start execution
             goal.start_execution()
 
-            return created_tasks
-
         except Exception as e:
             # Mark goal as failed with structured error context
             error_context = {
@@ -562,6 +560,9 @@ class Orchestrator:
             goal.fail(f"{type(e).__name__}: {str(e)[:200]}")
             msg = f"Goal decomposition failed: {error_context}"
             raise RuntimeError(msg) from e
+
+        else:
+            return created_tasks
 
     def get_goal(self, goal_id: str) -> Goal | None:
         """Get goal by ID.

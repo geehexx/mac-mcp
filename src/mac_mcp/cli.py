@@ -140,7 +140,6 @@ async def async_main(config_path: Path | None = None) -> int:
             return 1
 
         logger.info("MAC MCP Server stopped")
-        return 0
 
     except KeyboardInterrupt:
         logger = logging.getLogger("mac_mcp")
@@ -151,6 +150,9 @@ async def async_main(config_path: Path | None = None) -> int:
         logger = logging.getLogger("mac_mcp")
         logger.exception(f"Fatal error: {e}")
         return 1
+
+    else:
+        return 0
 
 
 def main() -> int:
