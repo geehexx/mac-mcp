@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "mac-mcp"
 version = "0.1.0"
-description = "Multi-Agent Coordination MCP Server - Protocol-sound orchestrator for autonomous LLM-based agent teams"
+description = "Multi-Agent Coordination MCP Server - Modular orchestrator with Core/Plugin architecture for autonomous LLM-based agent teams"
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
@@ -70,14 +70,13 @@ Repository = "https://github.com/geehexx/mac-mcp"
 Issues = "https://github.com/geehexx/mac-mcp/issues"
 
 [project.scripts]
-mac-mcp = "mac_mcp.cli:main"
-mac-mcp-server = "mac_mcp.mcp.__main__:main"
+mac-mcp-server = "mac_mcp_core.mcp.__main__:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/mac_mcp"]
+packages = ["src/mac_mcp_core", "src/mac_mcp_reference"]
 
 [tool.hatch.version]
-path = "src/mac_mcp/__init__.py"
+path = "src/mac_mcp_core/__init__.py"
 
 # Ruff configuration (replaces black, isort, flake8, etc.)
 [tool.ruff]
@@ -129,7 +128,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["mac_mcp"]
+known-first-party = ["mac_mcp_core", "mac_mcp_reference"]
 force-single-line = false
 lines-after-imports = 2
 
@@ -172,7 +171,8 @@ python_functions = ["test_*"]
 addopts = [
     "--strict-markers",
     "--strict-config",
-    "--cov=mac_mcp",
+    "--cov=mac_mcp_core",
+    "--cov=mac_mcp_reference",
     "--cov-report=term-missing:skip-covered",
     "--cov-report=html",
     "--cov-report=xml",

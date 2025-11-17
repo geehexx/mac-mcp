@@ -2,15 +2,81 @@
 
 Future enhancements prioritized by impact and effort.
 
-## Current (v0.1.0)
+## Current (v0.1.0) - Core/Plugin Architecture
 
-✅ Production-ready foundation with event sourcing, autonomous coordination, MCP June 2025 compliance.
+✅ **Modular Architecture**: Refactored into `mac_mcp_core` and `mac_mcp_reference` packages
+- **Core Package** (`mac_mcp_core`): Protocol-agnostic event sourcing backbone
+  - Event sourcing, storage, agent management
+  - Abstract interfaces: `AbstractGoalDecomposer`, `AbstractAgentMatcher`, `AbstractScheduler`
+  - MCP protocol handlers and authentication
+- **Reference Package** (`mac_mcp_reference`): Out-of-the-box implementations
+  - `SimpleDecomposer`: LLM-based goal decomposition
+  - `BasicMatcher`: Capability-based agent matching
+  - `TopologicalScheduler`: Dependency-ordered scheduling
+  - `ComponentFactory`: Dependency injection container
+
+✅ **Pluggable Orchestration**: Strategy pattern enables swapping implementations
+- Configure via environment variables or YAML
+- Local implementations (reference) or external MCP services
+- Designed for DSPy integration (see v0.2.0 below)
 
 See [CHANGELOG.md](CHANGELOG.md) for complete feature list.
 
 ---
 
-## Next Release (v0.2.0 - Q1 2026)
+## Next Release (v0.2.0 - Q1 2026) - DSPy Integration & Optimization
+
+### DSPy-Optimized Orchestration
+**Priority**: Critical | **Effort**: High
+
+Enable self-optimizing orchestration intelligence via DSPy:
+- **DSPyDecomposer**: Learn optimal decomposition patterns from successful goals
+- **DSPyMatcher**: Optimize agent-task matching based on historical performance
+- **DSPyScheduler**: Learn scheduling policies that minimize completion time
+- **MCP Remote Implementations**: Enable external DSPy services via MCP
+  - Endpoint: `POST coordination://decomposers/dspy_optimized`
+  - Use DSPy's signature optimization and few-shot learning
+  - Continuous improvement from production feedback
+- **Integration Guide**: Documentation for implementing DSPy-powered components
+
+### Implementation Strategy for DSPy Integration
+
+1. **Create DSPy Wrapper Implementations**:
+   ```python
+   # Example: DSPyDecomposer implementation
+   class DSPyDecomposer(AbstractGoalDecomposer):
+       def __init__(self, dspy_model, optimizer):
+           self.decompose_signature = dspy.Signature(
+               "goal_description -> task_dag"
+           )
+           self.predictor = dspy.Predict(self.decompose_signature)
+
+       async def decompose_goal(self, goal_id, user_prompt, context, constraints):
+           # Use DSPy to generate optimized decomposition
+           result = self.predictor(
+               goal_description=user_prompt,
+               context=context
+           )
+           return self._parse_to_task_dag(result)
+   ```
+
+2. **Add to ComponentFactory**:
+   ```python
+   elif config.type == DecomposerType.DSPY:
+       return create_dspy_decomposer(config.dspy_config)
+   ```
+
+3. **Configure via Environment**:
+   ```yaml
+   decomposer:
+     type: dspy
+     dspy_config:
+       model: claude-sonnet-4-5-20250929
+       optimizer: BootstrapFewShot
+       metrics: [task_completion_rate, time_to_complete]
+   ```
+
+## Next Release (v0.2.1 - Q1 2026)
 
 ### MCP Output Schema Compliance
 **Priority**: High | **Effort**: Low
