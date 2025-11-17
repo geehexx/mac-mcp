@@ -27,7 +27,7 @@ Register agent with capabilities.
 {
   "agent_id": "agent_001",
   "capabilities": ["python", "testing"],
-  "metadata": {"model": "claude-sonnet-4", "version": "1.0.0"}
+  "metadata": {"model": "claude-sonnet-4-5", "version": "1.0.0"}
 }
 ```
 
