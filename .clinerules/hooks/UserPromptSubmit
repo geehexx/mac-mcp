@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+# UserPromptSubmit Hook - Inject context based on user input
+# Detects keywords and provides relevant guidance
+
+# Read JSON input from stdin
+input=$(cat)
+
+# Extract prompt
+prompt=$(echo "$input" | jq -r '.userPromptSubmit.prompt // ""')
+prompt_lower=$(echo "$prompt" | tr '[:upper:]' '[:lower:]')
+
+# Initialize context
+context=""
+
+# Detect expert review requests
+if echo "$prompt_lower" | grep -qE "(review|expert|consensus|debate|validate)"; then
+    context="$context
+
+💡 EXPERT REVIEW PANEL AVAILABLE
+
+For complex decisions, consider convening an expert review panel:
+- Use before implementation of complex features
+- Use before commits touching >200 lines
+- Use for security/performance critical changes
+
+See: .clinerules/rules/core/expert-review-panel.md"
+fi
+
+# Detect git/commit related queries
+if echo "$prompt_lower" | grep -qE "(commit|git|push|merge|branch)"; then
+    context="$context
+
+📋 GIT WORKFLOW REMINDER
+
+- Use conventional commits: <type>(<scope>): <subject>
+- NEVER use --no-verify to bypass hooks
+- ALWAYS use 'git mv' for file moves (not filesystem mv)
+- Update CHANGELOG.md for user-facing changes
+- Prohibited files: *SUMMARY*.md, *HANDOFF*.md, *TODO*.md
+
+See: .clinerules/rules/core/development-workflow.md"
+fi
+
+# Detect testing requests
+if echo "$prompt_lower" | grep -qE "(test|coverage|pytest|unittest)"; then
+    context="$context
+
+🧪 TESTING STANDARDS
+
+- Target: ≥90% coverage for new code
+- Use markers: @pytest.mark.unit, @pytest.mark.integration, @pytest.mark.property
+- Tests must be: independent, deterministic, fast (<1s), clear assertions
+- Organization: tests/unit/, tests/integration/, tests/property/
+
+Run: pytest --cov=src --cov-report=term-missing"
+fi
+
+# Detect async/performance queries
+if echo "$prompt_lower" | grep -qE "(async|await|performance|slow|optimize)"; then
+    context="$context
+
+⚡ ASYNC PATTERNS
+
+- ALL I/O operations MUST be async
+- Use aiofiles for file operations (never open())
+- Use asyncio.sleep (never time.sleep)
+- Use semaphores for rate limiting
+- No blocking operations in async functions
+
+See: .clinerules/rules/reference/code-patterns.md"
+fi
+
+# Detect event sourcing queries
+if echo "$prompt_lower" | grep -qE "(event|sourcing|immutable|frozen)"; then
+    context="$context
+
+📝 EVENT SOURCING PRINCIPLES
+
+- All events MUST be immutable (frozen=True in Pydantic)
+- Events are append-only (never modify or delete)
+- State is reconstructed from event log
+- All state changes flow through events
+- No side effects in apply_event methods
+
+See: .clinerules/rules/reference/event-sourcing-patterns.md"
+fi
+
+# Detect sub-agent/research requests
+if echo "$prompt_lower" | grep -qE "(research|investigate|explore|find|search|analyze codebase)"; then
+    context="$context
+
+🤖 SUB-AGENT DELEGATION
+
+For large-scale research or exploration, use Cline CLI:
+  cline \"research prompt here\"
+
+Good candidates for sub-agents:
+- Exploring >10 files
+- Pattern searches across codebase
+- Dependency analysis
+- Architecture investigations
+
+Sub-agents are READ-ONLY - use for research, not editing."
+fi
+
+# Output JSON response
+if [ -n "$context" ]; then
+    jq -n \
+      --arg ctx "$context" \
+      '{
+        "cancel": false,
+        "contextModification": $ctx
+      }'
+else
+    jq -n '{
+        "cancel": false
+      }'
+fi
