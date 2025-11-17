@@ -3,12 +3,14 @@
 import asyncio
 import os
 import sys
+from pathlib import Path
 
 
 def main() -> None:
     """Run MCP server with stdio transport.
     
     Environment variables:
+    - MAC_STORAGE_PATH: path to JSONL event store (default: in-memory)
     - MAC_LLM_PROVIDER: llm provider (bedrock or anthropic, default: bedrock)
     - MAC_LLM_MODEL: model ID (default: anthropic.claude-sonnet-4-5-20250929-v1:0)
     - AWS_REGION: AWS region for Bedrock (default: us-east-1)
@@ -18,9 +20,16 @@ def main() -> None:
     from mac_mcp.core.orchestrator import Orchestrator
     from mac_mcp.core.supervisor import AgentSupervisor
     from mac_mcp.mcp.server import run_stdio_server
-    from mac_mcp.storage.memory import InMemoryEventStore
 
-    event_store = InMemoryEventStore()
+    # Storage setup
+    storage_path = os.getenv("MAC_STORAGE_PATH")
+    if storage_path:
+        from mac_mcp.storage.jsonl import JSONLEventStore
+        event_store = JSONLEventStore(Path(storage_path))
+    else:
+        from mac_mcp.storage.memory import InMemoryEventStore
+        event_store = InMemoryEventStore()
+    
     supervisor = AgentSupervisor(event_store)
     
     # Try to create LLM provider if credentials available

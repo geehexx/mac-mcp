@@ -12,6 +12,14 @@ See [CHANGELOG.md](CHANGELOG.md) for complete feature list.
 
 ## Next Release (v0.2.0 - Q1 2026)
 
+### MCP Output Schema Compliance
+**Priority**: High | **Effort**: Low
+
+Fix tool handlers to return structured data:
+- Handlers currently return TextContent causing validation warnings
+- Refactor to return dict matching outputSchema
+- Tools work but produce "Output validation error" messages
+
 ### LLM Rate Limiting
 **Priority**: Critical | **Effort**: Medium
 
@@ -30,6 +38,16 @@ Cache LLM decompositions for similar goals:
 - 30-50% reduction in LLM calls
 - Configurable TTL and cache size
 - Cost savings: ~$8-$860/month depending on volume
+
+### MCP Health Check Tool
+**Priority**: Medium | **Effort**: Low
+
+Add health/status tool:
+- Server status and uptime
+- LLM provider availability
+- Storage backend info
+- Active agents/tasks count
+- Memory usage
 
 ### Context Engineering
 **Priority**: High | **Effort**: High
