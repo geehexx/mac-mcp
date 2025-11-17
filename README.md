@@ -106,13 +106,22 @@
 ### Installation
 
 ```bash
-# Install from PyPI (when published)
-pip install mac-mcp
-
-# Or install from source
+# Install from source
 git clone https://github.com/yourusername/mac-mcp.git
 cd mac-mcp
-pip install -e .
+uv sync
+```
+
+**MCP Client Integration** (Q CLI, Claude Desktop, etc.):
+```json
+{
+  "mcpServers": {
+    "mac-mcp": {
+      "command": "uv",
+      "args": ["--directory", "/path/to/mac-mcp", "run", "mac-mcp-server"]
+    }
+  }
+}
 ```
 
 ### Configuration
