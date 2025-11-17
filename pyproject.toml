@@ -71,6 +71,7 @@ Issues = "https://github.com/geehexx/mac-mcp/issues"
 
 [project.scripts]
 mac-mcp = "mac_mcp.cli:main"
+mac-mcp-server = "mac_mcp.mcp.__main__:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/mac_mcp"]
